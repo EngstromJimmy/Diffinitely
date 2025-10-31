@@ -13,7 +13,7 @@ namespace Diffinitely.ToolWindows
 
         public override Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult<IRemoteUserControl>(new PRReviewRemoteUserControl());
+            return Task.FromResult<IRemoteUserControl>(new PRReviewRemoteUserControl(this.Extensibility));
         }
     }
 }
