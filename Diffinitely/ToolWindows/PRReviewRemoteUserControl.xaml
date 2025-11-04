@@ -1,21 +1,473 @@
-<DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:vs="http://schemas.microsoft.com/visualstudio/extensibility/2022/xaml"
- xmlns:styles="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
- xmlns:colors="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0">
-	<Grid Margin="8" Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-		</Grid.RowDefinitions>
-		
-		<TreeView ItemsSource="{Binding Roots}">
-			<TreeView.ItemTemplate>
-				<HierarchicalDataTemplate ItemsSource="{Binding Children}">
-					<TextBlock Text="{Binding Name}" />
-				</HierarchicalDataTemplate>
-			</TreeView.ItemTemplate>
-		</TreeView>
-	</Grid>
+<DataTemplate
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vs="http://schemas.microsoft.com/visualstudio/extensibility/2022/xaml"
+    xmlns:styles="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+    xmlns:local="clr-namespace:Diffinitely.ToolWindows;assembly=Diffinitely">
+
+    <Grid
+        Margin="8"
+        Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
+
+        <Grid.RowDefinitions>
+            <!-- toolbar row (Refresh etc) -->
+            <RowDefinition Height="Auto"/>
+            <!-- main content row (tabs) -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid.Resources>
+
+            <!-- Converters -->
+            <local:ZeroToCollapsedConverter x:Key="ZeroToCollapsedConverter" />
+            <local:BooleanToCollapsedWhenTrueConverter x:Key="BooleanToCollapsedWhenTrueConverter" />
+            <local:BooleanToVisibleWhenTrueConverter   x:Key="BooleanToVisibleWhenTrueConverter" />
+
+            <!-- VS themed base styles for TreeView / TreeViewItem -->
+            <Style TargetType="TreeView"
+                   BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogTreeViewStyleKey}}"/>
+            <Style TargetType="TreeViewItem"
+                   BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogTreeViewItemStyleKey}}"/>
+
+            <!-- Default text color = themed tool window text -->
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+            </Style>
+
+            <!-- Flat clickable button style -->
+            <Style x:Key="FlatListButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HorizontalAlignment" Value="Left"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg"
+                                    Background="Transparent">
+                                <ContentPresenter
+                                    Margin="{TemplateBinding Padding}"
+                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Tab theming -->
+            <Style TargetType="TabControl">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="Background"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                <Setter Property="BorderBrush"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+            </Style>
+
+            <Style TargetType="TabItem">
+                <Setter Property="Foreground"
+            Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="Background"
+            Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                <Setter Property="BorderBrush"
+            Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                <Setter Property="Padding" Value="6,3" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="TabBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="1,1,1,0"
+                        Padding="{TemplateBinding Padding}">
+                                <ContentPresenter
+                        x:Name="ContentSite"
+                        ContentSource="Header"
+                        RecognizesAccessKey="True"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        SnapsToDevicePixels="True"
+                        TextElement.Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                            </Border>
+
+                            <ControlTemplate.Triggers>
+
+                                <!-- Selected tab -->
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="TabBorder" Property="Background"
+                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                                    <Setter TargetName="TabBorder" Property="BorderBrush"
+                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                    <Setter Property="Foreground"
+                                Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                </Trigger>
+
+                                <!-- Hover tab -->
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="TabBorder" Property="Background"
+                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                                    <Setter TargetName="TabBorder" Property="BorderBrush"
+                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                    <Setter Property="Foreground"
+                                Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                </Trigger>
+
+                                <!-- Disabled tab -->
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="TabBorder" Property="Opacity" Value="0.5"/>
+                                </Trigger>
+
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+
+            <!-- ComboBox theming: keep it readable in dark mode -->
+            <Style TargetType="ComboBox">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="Background"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                <Setter Property="BorderBrush"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+            </Style>
+
+            <Style TargetType="ComboBoxItem">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="Background"
+                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+            </Style>
+
+        </Grid.Resources>
+
+        <!-- ===================== -->
+        <!-- GLOBAL TOOLBAR (ROW 0) -->
+        <!-- ===================== -->
+        <DockPanel
+            Grid.Row="0"
+            LastChildFill="False"
+            Margin="0,0,0,4"
+            Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
+
+            <!-- Refresh PR / files / comments -->
+            <Button
+                Style="{StaticResource FlatListButtonStyle}"
+                Command="{Binding RefreshCommand}"
+                Padding="4,2"
+                ToolTip="Refresh pull request data">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <vs:Image Source="{Binding RefreshIcon}"
+                              Width="16" Height="16"
+                              Margin="0,0,4,0" />
+                    <TextBlock
+                        Text="Refresh"
+                        Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                </StackPanel>
+            </Button>
+
+        </DockPanel>
+
+        <!-- ===================== -->
+        <!-- MAIN CONTENT (ROW 1) -->
+        <!-- ===================== -->
+        <TabControl
+            Grid.Row="1"
+            Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+            BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+            BorderThickness="1">
+
+            <!-- FILES TAB -->
+            <TabItem Header="Files">
+                <Grid
+                    Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TreeView
+                        Grid.Row="0"
+                        ItemsSource="{Binding Roots}"
+                        Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                        BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                        Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                        BorderThickness="1"
+                        Padding="4">
+
+                        <TreeView.ItemContainerStyle>
+                            <Style
+                                TargetType="TreeViewItem"
+                                BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogTreeViewItemStyleKey}}">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded}" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+
+                        <TreeView.Style>
+                            <Style
+                                TargetType="TreeView"
+                                BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogTreeViewStyleKey}}">
+                            </Style>
+                        </TreeView.Style>
+
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+
+                                    <!-- open diff / open file -->
+                                    <Button
+                                        Style="{StaticResource FlatListButtonStyle}"
+                                        Command="{Binding OpenCommand}">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <vs:Image Source="{Binding Icon}"
+                                                      Width="16" Height="16"
+                                                      Margin="0,0,4,0" />
+                                            <TextBlock
+                                                Text="{Binding Name}"
+                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <TextBlock Text=" "
+                                               Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+
+                                    <!-- comment badge -->
+                                    <Button
+                                        Style="{StaticResource FlatListButtonStyle}"
+                                        Command="{Binding OpenCommentsCommand}">
+                                        <Border
+                                            VerticalAlignment="Center"
+                                            Padding="4,0"
+                                            CornerRadius="3"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                                            Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                                            Visibility="{Binding CommentCount, Converter={StaticResource ZeroToCollapsedConverter}}">
+
+                                            <TextBlock
+                                                Text="{Binding CommentCount}"
+                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                                                FontSize="10"
+                                                VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Button>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </Grid>
+            </TabItem>
+
+            <!-- COMMENTS TAB -->
+            <TabItem Header="Comments">
+                <Grid
+                    Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                    Margin="0">
+
+                    <Grid.RowDefinitions>
+                        <!-- filter row -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- list row -->
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- FILTER BAR -->
+                    <DockPanel
+                        Grid.Row="0"
+                        LastChildFill="False"
+                        Margin="0,0,0,4"
+                        Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                        VerticalAlignment="Center">
+
+                        <!-- Author filter label -->
+                        <TextBlock
+                            Text="Author:"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+
+                        <!-- Author filter dropdown -->
+                        <ComboBox
+                            Width="160"
+                            ItemsSource="{Binding AllAuthors}"
+                            SelectedItem="{Binding SelectedAuthor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            ToolTip="Filter comments by author">
+                        </ComboBox>
+
+                        <!-- Could add more filters later (file path, unresolved only, etc.) -->
+                    </DockPanel>
+
+                    <!-- COMMENT LIST -->
+                    <ListView
+                        Grid.Row="1"
+                        ItemsSource="{Binding FilteredComments}"
+                        Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                        BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                        Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                        BorderThickness="1"
+                        Padding="4"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        HorizontalContentAlignment="Stretch">
+
+                        <ListView.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel
+                                    Orientation="Vertical"
+                                    IsItemsHost="True"
+                                    CanHorizontallyScroll="False"
+                                    CanVerticallyScroll="True"/>
+                            </ItemsPanelTemplate>
+                        </ListView.ItemsPanel>
+
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Margin="0,0,0,6"
+                                    Padding="6"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                                    Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                                    HorizontalAlignment="Stretch">
+
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <!-- row 0: file + line -->
+                                            <RowDefinition Height="Auto"/>
+                                            <!-- row 1: author + time -->
+                                            <RowDefinition Height="Auto"/>
+                                            <!-- row 2: body -->
+                                            <RowDefinition Height="Auto"/>
+                                            <!-- row 3: actions -->
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Row 0: file path + line -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Grid.Row="0"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,0,2">
+                                            <TextBlock
+                                                Text="{Binding FilePath}"
+                                                FontWeight="Bold"
+                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                            <TextBlock Text="  " />
+                                            <TextBlock
+                                                Text="{Binding Line, StringFormat=Line {0}}"
+                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                        </StackPanel>
+
+                                        <!-- Row 1: avatar + author + timestamp -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Grid.Row="1"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,0,4">
+
+                                            <Image
+                                                Width="16"
+                                                Height="16"
+                                                Margin="0,0,6,0"
+                                                Source="{Binding AuthorAvatarUrl}"
+                                                Stretch="UniformToFill"
+                                                SnapsToDevicePixels="True"/>
+
+                                            <TextBlock
+                                                FontSize="10"
+                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}">
+                                                <Run Text="{Binding Author}" />
+                                                <Run Text=" • " />
+                                                <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- Row 2: body text -->
+                                        <TextBlock
+                                            Grid.Row="2"
+                                            Text="{Binding Body}"
+                                            TextWrapping="Wrap"
+                                            Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                                            Margin="0,0,0,6"/>
+
+                                        <!-- Row 3: action bar -->
+                                        <StackPanel Orientation="Horizontal"
+                                                    Grid.Row="3"
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,0,0,0">
+
+                                            <!-- Reply -->
+                                            <Button
+                                                Style="{StaticResource FlatListButtonStyle}"
+                                                Command="{Binding ReplyCommand}"
+                                                Padding="4,2"
+                                                Margin="0,0,8,0">
+                                                <TextBlock
+                                                    Text="Reply"
+                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                                                    FontSize="11"/>
+                                            </Button>
+
+                                            <!-- Resolve -->
+                                            <Button
+                                                Style="{StaticResource FlatListButtonStyle}"
+                                                Command="{Binding ResolveCommand}"
+                                                Padding="4,2"
+                                                Margin="0,0,8,0"
+                                                Visibility="{Binding IsResolved,
+                                                                     Converter={StaticResource BooleanToCollapsedWhenTrueConverter},
+                                                                     FallbackValue=Visible}">
+                                                <TextBlock
+                                                    Text="Resolve"
+                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                                                    FontSize="11"/>
+                                            </Button>
+
+                                            <!-- Reopen -->
+                                            <Button
+                                                Style="{StaticResource FlatListButtonStyle}"
+                                                Command="{Binding ReopenCommand}"
+                                                Padding="4,2"
+                                                Margin="0,0,8,0"
+                                                Visibility="{Binding IsResolved,
+                                                                     Converter={StaticResource BooleanToVisibleWhenTrueConverter},
+                                                                     FallbackValue=Collapsed}">
+                                                <TextBlock
+                                                    Text="Reopen"
+                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                                                    FontSize="11"/>
+                                            </Button>
+
+                                            <!-- View thread -->
+                                            <Button
+                                                Style="{StaticResource FlatListButtonStyle}"
+                                                Command="{Binding ViewThreadCommand}"
+                                                Padding="4,2"
+                                                Margin="0,0,8,0">
+                                                <TextBlock
+                                                    Text="View thread"
+                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
+                                                    FontSize="11"/>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
 </DataTemplate>

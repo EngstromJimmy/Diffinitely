@@ -19,21 +19,25 @@ namespace Diffinitely.Services
             // If remote URL parsing failed earlier, try to extract owner/repo again directly from origin URL string.
             if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo)) return null;
 
-            var request = new PullRequestRequest { State = ItemStateFilter.Open, Head = owner + ":" + branch };
+            var request = new PullRequestRequest { State = ItemStateFilter.All, Head = owner + ":" + branch };
             var tokenAuth = new Credentials("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"); // This can be a PAT or an OAuth token.
             _client.Credentials = tokenAuth;
 
             var prs = await _client.PullRequest.GetAllForRepository(owner, repo, request);
             var pr = prs.Count > 0 ? prs[0] : null; if (pr == null) return null;
+            var comments = await _client.PullRequest.ReviewComment.GetAll(owner, repo, pr.Number);
             var files = await _client.PullRequest.Files(owner, repo, pr.Number);
             var changed = new List<ChangedFileInfo>();
+
             foreach (var f in files)
             {
                 var kind = ChangeKind.Modified;
                 switch (f.Status) { case "added": kind = ChangeKind.Added; break; case "removed": kind = ChangeKind.Deleted; break; case "renamed": kind = ChangeKind.Renamed; break; }
-                changed.Add(new ChangedFileInfo { Path = f.FileName, PreviousPath = f.PreviousFileName, Kind = kind });
+
+                var numberOfComments = comments.Count(c => c.Path == f.FileName);
+                changed.Add(new ChangedFileInfo { CommentCount = numberOfComments, FullPath = $"{repoRoot}\\{f.FileName}", Path = f.FileName, PreviousPath = f.PreviousFileName, Kind = kind });
             }
-            return new PullRequestInfo { Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot };
+            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot };
         }
 
         public async Task<string?> GetFileContentAsync(string owner, string repo, string path, string sha, CancellationToken ct)

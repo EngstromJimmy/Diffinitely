@@ -1,51 +1,286 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.Serialization;
+using Diffinitely.Commands;
+using Diffinitely.Models;
+using Diffinitely.Services;
+using Microsoft.VisualStudio.Extensibility;
+using Microsoft.VisualStudio.Extensibility.UI;
+
 namespace Diffinitely.ToolWindows;
 
 [DataContract]
 internal class PRReviewViewModel : INotifyPropertyChanged
 {
-    public PRReviewViewModel()
-    {
-        // Build some demo data
-        Roots.Add(
-            new TreeNode("Project A", new[]
-            {
-            new TreeNode("Controllers", new []
-            {
-                new TreeNode("WeatherController.cs"),
-                new TreeNode("AuthController.cs"),
-            }),
-            new TreeNode("Models", new []
-            {
-                new TreeNode("User.cs"),
-                new TreeNode("WeatherForecast.cs"),
-            }),
-            new TreeNode("Program.cs"),
-            new TreeNode("appsettings.json"),
-            })
-        );
+    // services we already need
+    private readonly GitHubPullRequestService _prService;
+    private readonly VisualStudioExtensibility _visualStudioExtensibility;
+    private readonly GitRepositoryService _repoService;
 
-        Roots.Add(
-            new TreeNode("Project B (Tests)", new[]
+    // this is the command the Refresh button will bind to
+    [DataMember]
+    public IAsyncCommand RefreshCommand { get; }
+    [DataMember]
+    public ObservableCollection<string> AllAuthors { get; } = new();
+    // this is just so we can show an icon in the Refresh button (optional but nice)
+    [DataMember]
+    public ImageMoniker RefreshIcon { get; } = ImageMoniker.KnownValues.Refresh;
+
+    [DataMember]
+    public ObservableCollectionEx<PrCommentItem> AllComments { get; } = new();
+    [DataMember]
+    public ObservableCollectionEx<PrCommentItem> FilteredComments { get; } = new();
+    [DataMember]
+    public ObservableCollectionEx<TreeNode> Roots { get; } = [];
+    // currently selected author from the ComboBox
+    private string? _selectedAuthor;
+    [DataMember]
+    public string? SelectedAuthor
+    {
+        get => _selectedAuthor;
+        set
+        {
+            if (_selectedAuthor != value)
             {
-            new TreeNode("UnitTests", new []
-            {
-                new TreeNode("WeatherTests.cs"),
-                new TreeNode("AuthTests.cs"),
-            }),
-            new TreeNode("TestBase.cs"),
-            })
-        );
+                _selectedAuthor = value;
+                RaisePropertyChanged(nameof(SelectedAuthor));
+                ApplyFilter();
+            }
+        }
+    }
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void RaisePropertyChanged(string propName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+    public PRReviewViewModel(
+        GitHubPullRequestService prService,
+        GitRepositoryService repoService,
+        VisualStudioExtensibility visualStudioExtensibility)
+    {
+        _prService = prService;
+        _visualStudioExtensibility = visualStudioExtensibility;
+        _repoService = repoService;
+
+        RefreshCommand = new AsyncCommand(ExecuteRefreshAsync);
     }
 
-    // top-level nodes in the TreeView
-    [DataMember]
-    public ObservableCollection<TreeNode> Roots { get; } = [];
+    public async Task LoadPullRequestAsync(CancellationToken cancellationToken)
+    {
+        await ReloadTreeInternalAsync(cancellationToken);
+    }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    private async Task ExecuteRefreshAsync(
+        object? parameter,
+        IClientContext clientContext,
+        CancellationToken cancellationToken)
+    {
+        await ReloadTreeInternalAsync(cancellationToken);
+    }
 
-    protected void RaisePropertyChanged(string propName)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+    private async Task ReloadTreeInternalAsync(CancellationToken cancellationToken)
+    {
+        var pr = await _prService.GetCurrentBranchPullRequestAsync(cancellationToken);
+        if (pr == null)
+        {
+            // no PR? clear tree
+            Roots.Clear();
+            return;
+        }
+
+        var built = BuildTreeFromPaths(pr.ChangedFiles, pr);
+
+        //Add treeview
+        Roots.Clear();
+        Roots.SupressNotification = true;
+        foreach (var node in built)
+        {
+            Roots.Add(node);
+        }
+
+        //Add comments
+        AllComments.Clear();
+        FilteredComments.Clear();
+        AllComments.SupressNotification = true;
+        FilteredComments.SupressNotification = true;
+        foreach (var c in pr.Comments)
+        {
+            AllComments.Add(new PrCommentItem
+            {
+                FilePath = c.Path ?? "",
+                Line = c.Position,
+                Author = c.User?.Login ?? "",
+                CreatedAt = c.CreatedAt,
+                Body = c.Body ?? "",
+                AuthorAvatarUrl = c.User.AvatarUrl,
+                IsResolved = false,
+                ReopenCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
+                ReplyCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
+                ResolveCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
+                ViewThreadCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
+            });
+        }
+
+        // Build authors list ("All" + distinct names)
+        AllAuthors.Clear();
+        AllAuthors.Add("<All>");
+        foreach (var authorName in AllComments
+            .Select(c => c.Author)
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Distinct()
+            .OrderBy(a => a))
+        {
+            AllAuthors.Add(authorName);
+        }
+
+        // Default filter: show all
+        SelectedAuthor = "<All>";
+        AllComments.SupressNotification = false;
+        FilteredComments.SupressNotification = false;
+        Roots.SupressNotification = false;
+        ApplyFilter();
+        RaisePropertyChanged(nameof(Roots));
+        RaisePropertyChanged(nameof(AllComments));
+    }
+
+    //
+    // build tree (folders + file leaves)
+    //
+    public ObservableCollection<TreeNode> BuildTreeFromPaths(IEnumerable<ChangedFileInfo> files, PullRequestInfo prInfo)
+    {
+        var roots = new ObservableCollection<TreeNode>();
+
+        foreach (var f in files)
+        {
+            AddPath(roots, f, 0, prInfo);
+        }
+
+        return roots;
+    }
+
+    //
+    // walk "Folder/SubFolder/File.cs" and build nodes
+    //
+    private void AddPath(ObservableCollection<TreeNode> nodes, ChangedFileInfo fileInfo, int index, PullRequestInfo prInfo)
+    {
+        // split on / or \ just in case
+        var parts = fileInfo.Path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return;
+
+        bool isLeaf = index == parts.Length - 1;
+        string segment = parts[index];
+
+        var node = nodes.FirstOrDefault(n => n.Name == segment);
+        if (node == null)
+        {
+            node = new TreeNode
+            {
+                Name = segment,
+                Icon = GetIconForSegment(segment, isLeaf),
+                IsExpanded = !isLeaf,
+                FullPath = fileInfo.FullPath
+            };
+
+            // If it's a file node, attach the "open file" command
+            if (isLeaf)
+            {
+                //string mainSnapshotPath = WriteTempVersion(
+                //baseBranchName: "main",
+                //relativePath: fileInfo.Path,
+                //baseContent: fileInfo.BaseContentFromMain);
+                node.OpenCommentsCommand = new OpenForReviewCommand(_visualStudioExtensibility, fileInfo.FullPath);
+                node.OpenCommand = new OpenDiffCommand(fileInfo, prInfo, _repoService);
+                node.CommentCount = fileInfo.CommentCount;
+            }
+
+            nodes.Add(node);
+        }
+
+        // go deeper if we're not at the file leaf yet
+        if (!isLeaf)
+        {
+            AddPath(node.Children, fileInfo, index + 1, prInfo);
+        }
+    }
+
+    private static ImageMoniker GetIconForSegment(string name, bool isLeaf)
+    {
+        if (!isLeaf)
+        {
+            return ImageMoniker.KnownValues.FolderClosed;
+        }
+
+        var ext = Path.GetExtension(name)?.ToLowerInvariant();
+
+        return ext switch
+        {
+            // Code
+            ".cs" => ImageMoniker.KnownValues.CSFileNode,
+            ".vb" => ImageMoniker.KnownValues.VBFileNode,
+            ".ts" => ImageMoniker.KnownValues.TSSourceFile,
+            ".tsx" => ImageMoniker.KnownValues.TSSourceFile,
+            ".js" => ImageMoniker.KnownValues.JSScript,
+            ".jsx" => ImageMoniker.KnownValues.JSScript,
+            ".css" => ImageMoniker.KnownValues.CSSClass,
+            ".scss" => ImageMoniker.KnownValues.CSSClass,
+            ".less" => ImageMoniker.KnownValues.CSSClass,
+            ".html" => ImageMoniker.KnownValues.HTMLFile,
+            ".htm" => ImageMoniker.KnownValues.HTMLFile,
+            ".razor" => ImageMoniker.KnownValues.ASPRazorFile,
+            ".cshtml" => ImageMoniker.KnownValues.ASPRazorFile,
+
+            // Json / yaml / config
+            ".json" => ImageMoniker.KnownValues.JSONScript,
+            ".yml" => ImageMoniker.KnownValues.YamlFile,
+            ".yaml" => ImageMoniker.KnownValues.YamlFile,
+            ".xml" => ImageMoniker.KnownValues.XMLFile,
+            ".config" => ImageMoniker.KnownValues.SettingsFile,
+            ".props" => ImageMoniker.KnownValues.XMLFile,
+            ".targets" => ImageMoniker.KnownValues.XMLFile,
+
+            // Markdown / text / docs
+            ".md" => ImageMoniker.KnownValues.MarkdownFile,
+            ".txt" => ImageMoniker.KnownValues.TextFile,
+            ".log" => ImageMoniker.KnownValues.TextFile,
+            ".license" => ImageMoniker.KnownValues.TextFile,
+
+            // Project/build
+            ".sln" => ImageMoniker.KnownValues.Solution,
+            ".csproj" => ImageMoniker.KnownValues.CSProjectNode,
+            ".vbproj" => ImageMoniker.KnownValues.VBProjectNode,
+            ".fsproj" => ImageMoniker.KnownValues.FSProjectNode,
+            ".proj" => ImageMoniker.KnownValues.CSProjectNode,
+            ".nuspec" => ImageMoniker.KnownValues.NuGet,
+            ".nupkg" => ImageMoniker.KnownValues.NuGet,
+
+            // Images
+            ".png" => ImageMoniker.KnownValues.Image,
+            ".jpg" => ImageMoniker.KnownValues.Image,
+            ".jpeg" => ImageMoniker.KnownValues.Image,
+            ".gif" => ImageMoniker.KnownValues.Image,
+            ".svg" => ImageMoniker.KnownValues.Image,
+
+            // default / unknown
+            _ => ImageMoniker.KnownValues.TargetFile
+        };
+    }
+    private void ApplyFilter()
+    {
+        FilteredComments.Clear();
+
+        IEnumerable<PrCommentItem> source = AllComments;
+
+        if (!string.IsNullOrEmpty(SelectedAuthor) &&
+            SelectedAuthor != "<All>")
+        {
+            source = source.Where(c => c.Author == SelectedAuthor);
+        }
+
+        // We could sort here too (e.g. newest first)
+        foreach (var item in source
+            .OrderByDescending(c => c.CreatedAt))
+        {
+            FilteredComments.Add(item);
+        }
+    }
 }

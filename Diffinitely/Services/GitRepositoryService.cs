@@ -39,6 +39,37 @@ namespace Diffinitely.Services
             return text; // detached hash
         }
 
+        public string GetFileContentFromCommit(string repoRoot, string commitSha, string relativePath)
+        {
+            // We’ll run: git show {commitSha}:{relativePath}
+            // Example: git show abc1234:src/Foo/Bar.cs
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = $"show {commitSha}:{relativePath}",
+                WorkingDirectory = repoRoot,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            string stdout = p.StandardOutput.ReadToEnd();
+            string stderr = p.StandardError.ReadToEnd();
+            p.WaitForExit();
+
+            // if file didn't exist in base (new file), git will error
+            if (p.ExitCode != 0)
+            {
+                // new file? we treat main as empty
+                return string.Empty;
+            }
+
+            return stdout;
+        }
+
         public bool TryGetRemoteOriginUrl(string repoRoot, out string owner, out string name)
         {
             owner = name = string.Empty;
@@ -63,7 +94,7 @@ namespace Diffinitely.Services
                         owner = m.Groups["owner"].Value;
                         name = m.Groups["repo"].Value;
                         if (name.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
-                            name = name.Substring(0, name.Length -4);
+                            name = name.Substring(0, name.Length - 4);
                         return true;
                     }
                 }
