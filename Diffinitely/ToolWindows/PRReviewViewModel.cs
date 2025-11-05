@@ -127,22 +127,60 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             FilteredComments.Clear();
             AllComments.SupressNotification = true;
             FilteredComments.SupressNotification = true;
-            foreach (var c in pr.Comments)
+
+            // Build comment items first (one per raw comment)
+            var tempMap = new Dictionary<long, PrCommentItem>();
+            foreach (var c in pr.Comments.OrderBy(c => c.CreatedAt))
             {
-                AllComments.Add(new PrCommentItem
+                var item = new PrCommentItem
                 {
                     FilePath = c.Path ?? "",
                     Line = c.Position,
                     Author = c.User?.Login ?? "",
                     CreatedAt = c.CreatedAt,
                     Body = c.Body ?? "",
-                    AuthorAvatarUrl = c.User.AvatarUrl,
+                    AuthorAvatarUrl = c.User?.AvatarUrl ?? "",
                     IsResolved = false,
-                    ReopenCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                    ReplyCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                    ResolveCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                    ViewThreadCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
-                });
+                    ViewCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
+                    ResolveCommand = new ResolveCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
+                };
+                tempMap[c.Id] = item;
+            }
+            // Link replies using InReplyToId (GitHub provides direct parent id)
+            foreach (var c in pr.Comments.OrderBy(c => c.CreatedAt))
+            {
+                if (c.InReplyToId.HasValue && tempMap.TryGetValue(c.InReplyToId.Value, out var parent))
+                {
+                    // Append as reply to parent (flatten multi-level by always attaching to direct parent)
+                    var replyItem = tempMap[c.Id];
+                    parent.ThreadReplies.Add(new PrCommentReply { Author = replyItem.Author, CreatedAt = replyItem.CreatedAt, Body = replyItem.Body });
+                }
+            }
+            // Add only top-level comments (no InReplyToId) to AllComments
+            foreach (var c in pr.Comments.Where(cm => !cm.InReplyToId.HasValue).OrderBy(cm => cm.CreatedAt))
+            {
+                AllComments.Add(tempMap[c.Id]);
+            }
+
+            // build threads (group by file+line)
+            foreach (var group in AllComments.GroupBy(cm => (cm.FilePath, cm.Line)))
+            {
+                var ordered = group.OrderBy(g => g.CreatedAt).ToList();
+                if (ordered.Count > 1)
+                {
+                    // treat first as root, attach rest as replies
+                    var root = ordered[0];
+                    for (int i = 1; i < ordered.Count; i++)
+                    {
+                        var reply = ordered[i];
+                        root.ThreadReplies.Add(new PrCommentReply
+                        {
+                            Author = reply.Author,
+                            CreatedAt = reply.CreatedAt,
+                            Body = reply.Body
+                        });
+                    }
+                }
             }
 
             // Build authors list ("All" + distinct names)

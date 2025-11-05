@@ -396,72 +396,33 @@
                                             </TextBlock>
                                         </StackPanel>
 
-                                        <!-- Row 2: body text -->
-                                        <TextBlock
-                                            Grid.Row="2"
-                                            Text="{Binding Body}"
-                                            TextWrapping="Wrap"
-                                            Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                                            Margin="0,0,0,6"/>
-
+                                        <!-- Row 2: body text + thread -->
+                                        <StackPanel Grid.Row="2" Margin="0,0,0,6">
+                                            <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
+                                            <ItemsControl ItemsSource="{Binding ThreadReplies}" Margin="12,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,2,0,2" Padding="4" BorderThickness="1" CornerRadius="3" BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}" Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
+                                                            <StackPanel>
+                                                                <TextBlock FontSize="10">
+                                                                    <Run Text="{Binding Author}" />
+                                                                    <Run Text=" • " />
+                                                                    <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
+                                                                </TextBlock>
+                                                                <TextBlock Text="{Binding Body}" TextWrapping="Wrap" FontSize="11" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
                                         <!-- Row 3: action bar -->
-                                        <StackPanel Orientation="Horizontal"
-                                                    Grid.Row="3"
-                                                    VerticalAlignment="Center"
-                                                    Margin="0,0,0,0">
-
-                                            <!-- Reply -->
-                                            <Button
-                                                Style="{StaticResource FlatListButtonStyle}"
-                                                Command="{Binding ReplyCommand}"
-                                                Padding="4,2"
-                                                Margin="0,0,8,0">
-                                                <TextBlock
-                                                    Text="Reply"
-                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                                                    FontSize="11"/>
+                                        <StackPanel Orientation="Horizontal" Grid.Row="3" VerticalAlignment="Center">
+                                            <Button Style="{StaticResource FlatListButtonStyle}" Command="{Binding ResolveCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding IsResolved, Converter={StaticResource BooleanToCollapsedWhenTrueConverter}, FallbackValue=Visible}">
+                                                <TextBlock Text="Resolve" FontSize="11"/>
                                             </Button>
-
-                                            <!-- Resolve -->
-                                            <Button
-                                                Style="{StaticResource FlatListButtonStyle}"
-                                                Command="{Binding ResolveCommand}"
-                                                Padding="4,2"
-                                                Margin="0,0,8,0"
-                                                Visibility="{Binding IsResolved,
-                                                                     Converter={StaticResource BooleanToCollapsedWhenTrueConverter},
-                                                                     FallbackValue=Visible}">
-                                                <TextBlock
-                                                    Text="Resolve"
-                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                                                    FontSize="11"/>
-                                            </Button>
-
-                                            <!-- Reopen -->
-                                            <Button
-                                                Style="{StaticResource FlatListButtonStyle}"
-                                                Command="{Binding ReopenCommand}"
-                                                Padding="4,2"
-                                                Margin="0,0,8,0"
-                                                Visibility="{Binding IsResolved,
-                                                                     Converter={StaticResource BooleanToVisibleWhenTrueConverter},
-                                                                     FallbackValue=Collapsed}">
-                                                <TextBlock
-                                                    Text="Reopen"
-                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                                                    FontSize="11"/>
-                                            </Button>
-
-                                            <!-- View thread -->
-                                            <Button
-                                                Style="{StaticResource FlatListButtonStyle}"
-                                                Command="{Binding ViewThreadCommand}"
-                                                Padding="4,2"
-                                                Margin="0,0,8,0">
-                                                <TextBlock
-                                                    Text="View thread"
-                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                                                    FontSize="11"/>
+                                            <Button Style="{StaticResource FlatListButtonStyle}" Command="{Binding ViewCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding IsResolved, Converter={StaticResource BooleanToVisibleWhenTrueConverter}, FallbackValue=Collapsed}">
+                                                <TextBlock Text="View" FontSize="11"/>
                                             </Button>
                                         </StackPanel>
                                     </Grid>
