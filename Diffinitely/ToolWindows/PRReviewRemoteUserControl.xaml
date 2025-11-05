@@ -174,7 +174,11 @@
                         Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
                 </StackPanel>
             </Button>
-
+            <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
+                <ProgressBar Width="120" Height="14" IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
+                <TextBlock Margin="8,0,0,0" Text="{Binding LoadingText}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
+                <TextBlock Margin="8,0,0,0" Text="{Binding Status}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToCollapsedWhenTrueConverter}}" />
+            </StackPanel>
         </DockPanel>
 
         <!-- ===================== -->

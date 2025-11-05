@@ -43,6 +43,8 @@ namespace Diffinitely.Models
 
         [DataMember]
         public IAsyncCommand? OpenCommentsCommand { get; set; }
+        [DataMember]
+        public string? ChangeKind { get; set; }
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void RaisePropertyChanged([CallerMemberName] string? propName = null)

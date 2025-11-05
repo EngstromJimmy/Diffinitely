@@ -33,6 +33,23 @@ internal class PRReviewViewModel : INotifyPropertyChanged
     public ObservableCollectionEx<PrCommentItem> FilteredComments { get; } = new();
     [DataMember]
     public ObservableCollectionEx<TreeNode> Roots { get; } = [];
+
+    // Loading indicator properties
+    private bool _isLoading;
+    [DataMember]
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set { if (_isLoading != value) { _isLoading = value; RaisePropertyChanged(nameof(IsLoading)); } }
+    }
+    private string _loadingText = "Loading pull request...";
+    [DataMember]
+    public string LoadingText
+    {
+        get => _loadingText;
+        set { if (_loadingText != value) { _loadingText = value; RaisePropertyChanged(nameof(LoadingText)); } }
+    }
+
     // currently selected author from the ComboBox
     private string? _selectedAuthor;
     [DataMember]
@@ -79,65 +96,77 @@ internal class PRReviewViewModel : INotifyPropertyChanged
 
     private async Task ReloadTreeInternalAsync(CancellationToken cancellationToken)
     {
-        var pr = await _prService.GetCurrentBranchPullRequestAsync(cancellationToken);
-        if (pr == null)
+        IsLoading = true;
+        LoadingText = "Loading pull request...";
+        try
         {
-            // no PR? clear tree
-            Roots.Clear();
-            return;
-        }
-
-        var built = BuildTreeFromPaths(pr.ChangedFiles, pr);
-
-        //Add treeview
-        Roots.Clear();
-        Roots.SupressNotification = true;
-        foreach (var node in built)
-        {
-            Roots.Add(node);
-        }
-
-        //Add comments
-        AllComments.Clear();
-        FilteredComments.Clear();
-        AllComments.SupressNotification = true;
-        FilteredComments.SupressNotification = true;
-        foreach (var c in pr.Comments)
-        {
-            AllComments.Add(new PrCommentItem
+            var pr = await _prService.GetCurrentBranchPullRequestAsync(cancellationToken);
+            if (pr == null)
             {
-                FilePath = c.Path ?? "",
-                Line = c.Position,
-                Author = c.User?.Login ?? "",
-                CreatedAt = c.CreatedAt,
-                Body = c.Body ?? "",
-                AuthorAvatarUrl = c.User.AvatarUrl,
-                IsResolved = false,
-                ReopenCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                ReplyCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                ResolveCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                ViewThreadCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
-            });
-        }
+                // no PR? clear tree
+                Roots.Clear();
+                LoadingText = "No pull request for current branch.";
+                return;
+            }
 
-        // Build authors list ("All" + distinct names)
-        AllAuthors.Clear();
-        AllAuthors.Add("<All>");
-        foreach (var authorName in AllComments
-            .Select(c => c.Author)
-            .Where(a => !string.IsNullOrWhiteSpace(a))
-            .Distinct()
-            .OrderBy(a => a))
+            LoadingText = "Loading changed files...";
+            var built = BuildTreeFromPaths(pr.ChangedFiles, pr);
+
+            //Add treeview
+            Roots.Clear();
+            Roots.SupressNotification = true;
+            foreach (var node in built)
+            {
+                Roots.Add(node);
+            }
+            Roots.SupressNotification = false;
+
+            LoadingText = "Loading comments...";
+            //Add comments
+            AllComments.Clear();
+            FilteredComments.Clear();
+            AllComments.SupressNotification = true;
+            FilteredComments.SupressNotification = true;
+            foreach (var c in pr.Comments)
+            {
+                AllComments.Add(new PrCommentItem
+                {
+                    FilePath = c.Path ?? "",
+                    Line = c.Position,
+                    Author = c.User?.Login ?? "",
+                    CreatedAt = c.CreatedAt,
+                    Body = c.Body ?? "",
+                    AuthorAvatarUrl = c.User.AvatarUrl,
+                    IsResolved = false,
+                    ReopenCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
+                    ReplyCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
+                    ResolveCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
+                    ViewThreadCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
+                });
+            }
+
+            // Build authors list ("All" + distinct names)
+            AllAuthors.Clear();
+            AllAuthors.Add("<All>");
+            foreach (var authorName in AllComments
+                .Select(c => c.Author)
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Distinct()
+                .OrderBy(a => a))
+            {
+                AllAuthors.Add(authorName);
+            }
+
+            // Default filter: show all
+            SelectedAuthor = "<All>";
+            AllComments.SupressNotification = false;
+            FilteredComments.SupressNotification = false;
+            ApplyFilter();
+        }
+        finally
         {
-            AllAuthors.Add(authorName);
+            IsLoading = false;
         }
-
-        // Default filter: show all
-        SelectedAuthor = "<All>";
-        AllComments.SupressNotification = false;
-        FilteredComments.SupressNotification = false;
-        Roots.SupressNotification = false;
-        ApplyFilter();
         RaisePropertyChanged(nameof(Roots));
         RaisePropertyChanged(nameof(AllComments));
     }
@@ -191,6 +220,7 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                 node.OpenCommentsCommand = new OpenForReviewCommand(_visualStudioExtensibility, fileInfo.FullPath);
                 node.OpenCommand = new OpenDiffCommand(fileInfo, prInfo, _repoService);
                 node.CommentCount = fileInfo.CommentCount;
+                node.ChangeKind = fileInfo.Kind.ToString();
             }
 
             nodes.Add(node);
