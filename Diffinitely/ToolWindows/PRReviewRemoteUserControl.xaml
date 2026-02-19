@@ -132,20 +132,8 @@
 
 
             <!-- ComboBox theming: keep it readable in dark mode -->
-            <Style TargetType="ComboBox">
-                <Setter Property="Foreground"
-                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
-                <Setter Property="Background"
-                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
-                <Setter Property="BorderBrush"
-                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
-            </Style>
-
-            <Style TargetType="ComboBoxItem">
-                <Setter Property="Foreground"
-                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
-                <Setter Property="Background"
-                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+            <Style TargetType="ComboBox"
+                   BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogComboBoxStyleKey}}">
             </Style>
 
         </Grid.Resources>
