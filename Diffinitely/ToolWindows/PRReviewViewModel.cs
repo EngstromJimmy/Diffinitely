@@ -142,7 +142,7 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                     AuthorAvatarUrl = c.User?.AvatarUrl ?? "",
                     IsResolved = false,
                     ViewCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                    ResolveCommand = new ResolveCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
+                    //ResolveCommand = new ResolveCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
                 };
                 tempMap[c.Id] = item;
             }
