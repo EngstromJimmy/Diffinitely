@@ -309,7 +309,22 @@
                             ToolTip="Filter comments by author">
                         </ComboBox>
 
-                        <!-- Could add more filters later (file path, unresolved only, etc.) -->
+                        <!-- Resolution filter label -->
+                        <TextBlock
+                            Text="Status:"
+                            Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+
+                        <!-- Resolution filter dropdown -->
+                        <ComboBox
+                            Width="120"
+                            ItemsSource="{Binding AllResolutionFilters}"
+                            SelectedItem="{Binding SelectedResolutionFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            ToolTip="Filter by resolution status">
+                        </ComboBox>
                     </DockPanel>
 
                     <!-- COMMENT LIST -->

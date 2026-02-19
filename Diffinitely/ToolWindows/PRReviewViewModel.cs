@@ -66,6 +66,26 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             }
         }
     }
+
+    // resolution status filter
+    [DataMember]
+    public ObservableCollection<string> AllResolutionFilters { get; } = new() { "<All>", "Unresolved", "Resolved" };
+
+    private string? _selectedResolutionFilter = "<All>";
+    [DataMember]
+    public string? SelectedResolutionFilter
+    {
+        get => _selectedResolutionFilter;
+        set
+        {
+            if (_selectedResolutionFilter != value)
+            {
+                _selectedResolutionFilter = value;
+                RaisePropertyChanged(nameof(SelectedResolutionFilter));
+                ApplyFilter();
+            }
+        }
+    }
     public event PropertyChangedEventHandler? PropertyChanged;
     private void RaisePropertyChanged(string propName) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
@@ -197,6 +217,7 @@ internal class PRReviewViewModel : INotifyPropertyChanged
 
             // Default filter: show all
             SelectedAuthor = "<All>";
+            SelectedResolutionFilter = "<All>";
             AllComments.SupressNotification = false;
             FilteredComments.SupressNotification = false;
             ApplyFilter();
@@ -342,6 +363,15 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             SelectedAuthor != "<All>")
         {
             source = source.Where(c => c.Author == SelectedAuthor);
+        }
+
+        if (SelectedResolutionFilter == "Resolved")
+        {
+            source = source.Where(c => c.IsResolved);
+        }
+        else if (SelectedResolutionFilter == "Unresolved")
+        {
+            source = source.Where(c => !c.IsResolved);
         }
 
         // We could sort here too (e.g. newest first)
