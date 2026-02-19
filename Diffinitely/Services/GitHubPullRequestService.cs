@@ -134,7 +134,8 @@ namespace Diffinitely.Services
                 var numberOfComments = comments.Count(c => c.Path == f.FileName);
                 changed.Add(new ChangedFileInfo { CommentCount = numberOfComments, FullPath = $"{repoRoot}\\{f.FileName}", Path = f.FileName, PreviousPath = f.PreviousFileName, Kind = kind });
             }
-            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot };
+            var threadResolution = await GetReviewThreadResolutionAsync(owner, repo, pr.Number, ct);
+            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot, ThreadResolution = threadResolution };
         }
 
         public async Task<string?> GetFileContentAsync(string owner, string repo, string path, string sha, CancellationToken ct)
@@ -146,6 +147,72 @@ namespace Diffinitely.Services
                 return first?.Content; // API returns Base64 decoded content
             }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// Queries the GitHub GraphQL API to get the resolved status of each review thread.
+        /// Returns a dictionary mapping the first comment's database ID to its thread's isResolved flag.
+        /// </summary>
+        internal async Task<Dictionary<long, bool>> GetReviewThreadResolutionAsync(
+            string owner, string repo, int prNumber, CancellationToken ct)
+        {
+            var result = new Dictionary<long, bool>();
+
+            var token = _cachedToken;
+            if (string.IsNullOrEmpty(token))
+                token = _client.Credentials?.Password;
+            if (string.IsNullOrEmpty(token))
+                return result;
+
+            var query = "query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}";
+
+            try
+            {
+                using var httpClient = new System.Net.Http.HttpClient();
+                httpClient.DefaultRequestHeaders.Add("Authorization", $"token {token}");
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "DiffinitelyPRHelper");
+
+                var requestBody = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    query,
+                    variables = new { owner, repo, number = prNumber }
+                });
+
+                var content = new System.Net.Http.StringContent(requestBody, Encoding.UTF8, "application/json");
+                var response = await httpClient.PostAsync("https://api.github.com/graphql", content, ct);
+
+                if (!response.IsSuccessStatusCode) return result;
+
+                var json = await response.Content.ReadAsStringAsync();
+
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("data", out var data)) return result;
+                if (!data.TryGetProperty("repository", out var repository)) return result;
+                if (!repository.TryGetProperty("pullRequest", out var pullRequest)) return result;
+                if (!pullRequest.TryGetProperty("reviewThreads", out var reviewThreads)) return result;
+                if (!reviewThreads.TryGetProperty("nodes", out var nodes)) return result;
+
+                foreach (var thread in nodes.EnumerateArray())
+                {
+                    if (!thread.TryGetProperty("isResolved", out var isResolvedProp)) continue;
+                    bool isResolved = isResolvedProp.GetBoolean();
+
+                    if (!thread.TryGetProperty("comments", out var comments)) continue;
+                    if (!comments.TryGetProperty("nodes", out var commentNodes)) continue;
+
+                    foreach (var comment in commentNodes.EnumerateArray())
+                    {
+                        if (comment.TryGetProperty("databaseId", out var dbIdProp) &&
+                            dbIdProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        {
+                            result[dbIdProp.GetInt64()] = isResolved;
+                        }
+                    }
+                }
+            }
+            catch { /* best-effort; fall back to all-unresolved */ }
+
+            return result;
         }
     }
 }

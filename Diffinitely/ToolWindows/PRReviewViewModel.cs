@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.Serialization;
@@ -140,7 +140,7 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                     CreatedAt = c.CreatedAt,
                     Body = c.Body ?? "",
                     AuthorAvatarUrl = c.User?.AvatarUrl ?? "",
-                    IsResolved = false,
+                    IsResolved = pr.ThreadResolution.TryGetValue(c.Id, out var resolved) && resolved,
                     ViewCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
                     //ResolveCommand = new ResolveCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
                 };

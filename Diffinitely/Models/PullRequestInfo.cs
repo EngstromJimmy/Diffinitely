@@ -14,5 +14,6 @@ namespace Diffinitely.Models
         public string HeadSha { get; set; }
         public string RepoRoot { get; set; } // local repository root path
         public IReadOnlyList<PullRequestReviewComment> Comments { get; set; } = [];
+        public Dictionary<long, bool> ThreadResolution { get; set; } = new();
     }
 }
