@@ -394,7 +394,7 @@
                                                 FontSize="10"
                                                 Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}">
                                                 <Run Text="{Binding Author}" />
-                                                <Run Text=" • " />
+                                                <Run Text=" - " />
                                                 <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
                                             </TextBlock>
                                         </StackPanel>
@@ -409,7 +409,7 @@
                                                             <StackPanel>
                                                                 <TextBlock FontSize="10">
                                                                     <Run Text="{Binding Author}" />
-                                                                    <Run Text=" • " />
+                                                                    <Run Text=" - " />
                                                                     <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
                                                                 </TextBlock>
                                                                 <TextBlock Text="{Binding Body}" TextWrapping="Wrap" FontSize="11" />
@@ -420,14 +420,14 @@
                                             </ItemsControl>
                                         </StackPanel>
                                         <!-- Row 3: action bar -->
-                                        <StackPanel Orientation="Horizontal" Grid.Row="3" VerticalAlignment="Center">
-                                            <Button Style="{StaticResource FlatListButtonStyle}" Command="{Binding ResolveCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding IsResolved, Converter={StaticResource BooleanToCollapsedWhenTrueConverter}, FallbackValue=Visible}">
+                                        <DockPanel Grid.Row="3" VerticalAlignment="Center" LastChildFill="False">
+                                            <Button DockPanel.Dock="Left" Style="{StaticResource FlatListButtonStyle}" Command="{Binding ResolveCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding IsResolved, Converter={StaticResource BooleanToCollapsedWhenTrueConverter}, FallbackValue=Visible}">
                                                 <TextBlock Text="Resolve" FontSize="11"/>
                                             </Button>
-                                            <Button Style="{StaticResource FlatListButtonStyle}" Command="{Binding ViewCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding IsResolved, Converter={StaticResource BooleanToVisibleWhenTrueConverter}, FallbackValue=Collapsed}">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatListButtonStyle}" Command="{Binding ViewCommand}" Padding="4,2" Margin="0,0,8,0" HorizontalAlignment="Right">
                                                 <TextBlock Text="View" FontSize="11"/>
                                             </Button>
-                                        </StackPanel>
+                                        </DockPanel>
                                     </Grid>
 
                                 </Border>
