@@ -19,6 +19,13 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Stamp version in vsixmanifest
+        shell: pwsh
+        run: |
+          [xml]$manifest = Get-Content "Diffinitely/source.extension.vsixmanifest"
+          $manifest.PackageManifest.Metadata.Identity.Version = "1.0.${{ github.run_number }}"
+          $manifest.Save((Resolve-Path "Diffinitely/source.extension.vsixmanifest"))
+
       - name: Restore dependencies
         run: dotnet restore Diffinitely/Diffinitely.csproj
 
