@@ -1,0 +1,24 @@
+{
+  "universe_usage_history": [
+    {
+      "universe": "DC Universe",
+      "first_used": "2026-03-07T22:16:17Z",
+      "assignment_id": "diffinitely-2026-03-07"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "diffinitely-2026-03-07": {
+      "project": "Diffinitely",
+      "universe": "DC Universe",
+      "cast_at": "2026-03-07T22:16:17Z",
+      "requested_by": "Jimmy Engström",
+      "agents": {
+        "bruce": "Lead",
+        "selina": "Frontend Dev",
+        "lucius": "Backend Dev",
+        "renee": "Tester",
+        "gordon": "Security/Auth"
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "agents": {
+    "bruce": {
+      "persistent_name": "Bruce",
+      "universe": "DC Universe",
+      "role": "Lead",
+      "created_at": "2026-03-07T22:16:17Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "selina": {
+      "persistent_name": "Selina",
+      "universe": "DC Universe",
+      "role": "Frontend Dev",
+      "created_at": "2026-03-07T22:16:17Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "lucius": {
+      "persistent_name": "Lucius",
+      "universe": "DC Universe",
+      "role": "Backend Dev",
+      "created_at": "2026-03-07T22:16:17Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "renee": {
+      "persistent_name": "Renee",
+      "universe": "DC Universe",
+      "role": "Tester",
+      "created_at": "2026-03-07T22:16:17Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "gordon": {
+      "persistent_name": "Gordon",
+      "universe": "DC Universe",
+      "role": "Security/Auth",
+      "created_at": "2026-03-07T22:16:17Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "scribe": {
+      "persistent_name": "Scribe",
+      "universe": null,
+      "role": "Scribe",
+      "created_at": "2026-03-07T22:16:17Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "ralph": {
+      "persistent_name": "Ralph",
+      "universe": null,
+      "role": "Work Monitor",
+      "created_at": "2026-03-07T22:16:17Z",
+      "legacy_named": false,
+      "status": "active"
+    }
+  }
+}

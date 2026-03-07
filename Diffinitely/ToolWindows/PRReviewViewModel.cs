@@ -265,7 +265,7 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             {
                 Name = segment,
                 Icon = GetIconForSegment(segment, isLeaf),
-                IsExpanded = !isLeaf,
+                IsExpanded = !isLeaf && !segment.StartsWith('.'),
                 FullPath = fileInfo.FullPath
             };
 
