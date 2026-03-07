@@ -17,3 +17,11 @@
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
+
+### 2026-03-07 — Release workflow added
+
+- **`.slnx` format**: `nuget restore` does not support the `.slnx` format. Use `dotnet restore <project.csproj>` directly — SDK-style projects support this even for net472 VSSDK targets.
+- **VSIX build flags**: Always pass `/p:DeployExtension=false /p:SkipOpenVisualStudio=true` to `msbuild` when building VSIX in CI to prevent it from trying to install or launch Visual Studio.
+- **Runner requirement**: VSIX builds (and net472 test runs) require `windows-latest`. Linux/macOS runners will not work.
+- **Release naming convention**: Using `v1.0.${{ github.run_number }}` for sequential versioning. Can migrate to semver tags later.
+- **Output artifact path**: VSIX lands at `Diffinitely/bin/Release/net472/Diffinitely.vsix`.
