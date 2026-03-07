@@ -5,6 +5,15 @@
 - **Stack:** C#, WPF/XAML, Visual Studio extension SDK (VSIX), GitHub API, Community Toolkit MVVM
 - **Created:** 2026-03-07
 
+## Work Completed
+
+### 2026-03-07 — Dot-Folder Collapse Testing (Issue #1)
+- Created `Diffinitely.Tests/` xUnit project targeting net472; added to Diffinitely.slnx
+- Extracted `PathTreeBuilder` from `PRReviewViewModel` for testability
+- Built 5 test cases covering: dot-root collapse, nested dot-folder collapse, normal folder expansion, leaf nodes, multi-file dot folders
+- Fixed compile errors: `StartsWith(char)` → `StartsWith(string)` for net472
+- All 5 tests passing; coordinated with Selina; ready for team review
+
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->

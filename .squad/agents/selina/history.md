@@ -13,6 +13,16 @@
 - `Diffinitely/ToolWindows/BooleanToVisibleWhenTrueConverter.cs` — converter
 - `Diffinitely/ToolWindows/ZeroToCollapsedConverter.cs` — converter
 
+## Work Completed
+
+### 2026-03-07 — Dot-Folder Collapse (Issue #1)
+- Fixed `IsExpanded` logic in `PRReviewViewModel.cs`; gate expansion with `!isLeaf && !segment.StartsWith(".")`
+- Extracted tree-building logic from `PRReviewViewModel` into testable `PathTreeBuilder` static helper
+- Pattern enables clean separation of concerns; VS-specific leaf decoration is injectable via action delegate
+- Coordinated with Renee; 5 tests passing, feature complete
+
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
+
+- **Dot-folder collapse (Issue #1):** In `AddPath` on `PRReviewViewModel.cs`, `TreeNode.IsExpanded` is set inline at creation time. The pattern `!isLeaf && !segment.StartsWith('.')` is the right place to gate default expansion — no XAML triggers or style setters needed for this kind of initial-state logic.
