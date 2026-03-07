@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore dependencies
+        run: dotnet restore Diffinitely/Diffinitely.csproj
+
+      - name: Build VSIX
+        run: |
+          msbuild Diffinitely/Diffinitely.csproj `
+            /p:Configuration=Release `
+            /p:DeployExtension=false `
+            /p:SkipOpenVisualStudio=true
+
+      - name: Run tests
+        run: |
+          dotnet test Diffinitely.Tests/Diffinitely.Tests.csproj `
+            --configuration Release `
+            --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: Diffinitely.Tests/TestResults/test-results.trx
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: v1.0.${{ github.run_number }}
+          body: |
+            **Commit:** ${{ github.sha }}
+
+            ## Install
+            Download `Diffinitely.vsix` below and double-click to install into Visual Studio.
+          files: Diffinitely/bin/Release/net472/Diffinitely.vsix

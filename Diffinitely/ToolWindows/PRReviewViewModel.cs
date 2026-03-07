@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.Serialization;
 using Diffinitely.Commands;
 using Diffinitely.Models;
@@ -235,124 +234,13 @@ internal class PRReviewViewModel : INotifyPropertyChanged
     //
     public ObservableCollection<TreeNode> BuildTreeFromPaths(IEnumerable<ChangedFileInfo> files, PullRequestInfo prInfo)
     {
-        var roots = new ObservableCollection<TreeNode>();
-
-        foreach (var f in files)
+        return PathTreeBuilder.Build(files, (node, fi) =>
         {
-            AddPath(roots, f, 0, prInfo);
-        }
-
-        return roots;
+            node.OpenCommentsCommand = new OpenForReviewCommand(_visualStudioExtensibility, fi.FullPath);
+            node.OpenCommand = new OpenDiffCommand(fi, prInfo, _repoService);
+        });
     }
 
-    //
-    // walk "Folder/SubFolder/File.cs" and build nodes
-    //
-    private void AddPath(ObservableCollection<TreeNode> nodes, ChangedFileInfo fileInfo, int index, PullRequestInfo prInfo)
-    {
-        // split on / or \ just in case
-        var parts = fileInfo.Path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0)
-            return;
-
-        bool isLeaf = index == parts.Length - 1;
-        string segment = parts[index];
-
-        var node = nodes.FirstOrDefault(n => n.Name == segment);
-        if (node == null)
-        {
-            node = new TreeNode
-            {
-                Name = segment,
-                Icon = GetIconForSegment(segment, isLeaf),
-                IsExpanded = !isLeaf && !segment.StartsWith('.'),
-                FullPath = fileInfo.FullPath
-            };
-
-            // If it's a file node, attach the "open file" command
-            if (isLeaf)
-            {
-                //string mainSnapshotPath = WriteTempVersion(
-                //baseBranchName: "main",
-                //relativePath: fileInfo.Path,
-                //baseContent: fileInfo.BaseContentFromMain);
-                node.OpenCommentsCommand = new OpenForReviewCommand(_visualStudioExtensibility, fileInfo.FullPath);
-                node.OpenCommand = new OpenDiffCommand(fileInfo, prInfo, _repoService);
-                node.CommentCount = fileInfo.CommentCount;
-                node.ChangeKind = fileInfo.Kind.ToString();
-            }
-
-            nodes.Add(node);
-        }
-
-        // go deeper if we're not at the file leaf yet
-        if (!isLeaf)
-        {
-            AddPath(node.Children, fileInfo, index + 1, prInfo);
-        }
-    }
-
-    private static ImageMoniker GetIconForSegment(string name, bool isLeaf)
-    {
-        if (!isLeaf)
-        {
-            return ImageMoniker.KnownValues.FolderClosed;
-        }
-
-        var ext = Path.GetExtension(name)?.ToLowerInvariant();
-
-        return ext switch
-        {
-            // Code
-            ".cs" => ImageMoniker.KnownValues.CSFileNode,
-            ".vb" => ImageMoniker.KnownValues.VBFileNode,
-            ".ts" => ImageMoniker.KnownValues.TSSourceFile,
-            ".tsx" => ImageMoniker.KnownValues.TSSourceFile,
-            ".js" => ImageMoniker.KnownValues.JSScript,
-            ".jsx" => ImageMoniker.KnownValues.JSScript,
-            ".css" => ImageMoniker.KnownValues.CSSClass,
-            ".scss" => ImageMoniker.KnownValues.CSSClass,
-            ".less" => ImageMoniker.KnownValues.CSSClass,
-            ".html" => ImageMoniker.KnownValues.HTMLFile,
-            ".htm" => ImageMoniker.KnownValues.HTMLFile,
-            ".razor" => ImageMoniker.KnownValues.ASPRazorFile,
-            ".cshtml" => ImageMoniker.KnownValues.ASPRazorFile,
-
-            // Json / yaml / config
-            ".json" => ImageMoniker.KnownValues.JSONScript,
-            ".yml" => ImageMoniker.KnownValues.YamlFile,
-            ".yaml" => ImageMoniker.KnownValues.YamlFile,
-            ".xml" => ImageMoniker.KnownValues.XMLFile,
-            ".config" => ImageMoniker.KnownValues.SettingsFile,
-            ".props" => ImageMoniker.KnownValues.XMLFile,
-            ".targets" => ImageMoniker.KnownValues.XMLFile,
-
-            // Markdown / text / docs
-            ".md" => ImageMoniker.KnownValues.MarkdownFile,
-            ".txt" => ImageMoniker.KnownValues.TextFile,
-            ".log" => ImageMoniker.KnownValues.TextFile,
-            ".license" => ImageMoniker.KnownValues.TextFile,
-
-            // Project/build
-            ".sln" => ImageMoniker.KnownValues.Solution,
-            ".csproj" => ImageMoniker.KnownValues.CSProjectNode,
-            ".vbproj" => ImageMoniker.KnownValues.VBProjectNode,
-            ".fsproj" => ImageMoniker.KnownValues.FSProjectNode,
-            ".proj" => ImageMoniker.KnownValues.CSProjectNode,
-            ".nuspec" => ImageMoniker.KnownValues.NuGet,
-            ".nupkg" => ImageMoniker.KnownValues.NuGet,
-
-            // Images
-            ".png" => ImageMoniker.KnownValues.Image,
-            ".jpg" => ImageMoniker.KnownValues.Image,
-            ".jpeg" => ImageMoniker.KnownValues.Image,
-            ".gif" => ImageMoniker.KnownValues.Image,
-            ".svg" => ImageMoniker.KnownValues.Image,
-
-            // default / unknown
-            _ => ImageMoniker.KnownValues.TargetFile
-        };
-    }
     private void ApplyFilter()
     {
         FilteredComments.Clear();
