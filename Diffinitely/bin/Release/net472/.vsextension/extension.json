@@ -1,0 +1,72 @@
+{
+  "controlPlacements": [
+    {
+      "controlName": "Diffinitely.PRReviewCommand",
+      "parent": {
+        "legacyParentId": {
+          "guid": "d309f791-903f-11d0-9efc-00a0c911004f",
+          "id": 24576
+        },
+        "priority": 0
+      }
+    }
+  ],
+  "toolWindows": [
+    {
+      "identifier": "Diffinitely.ToolWindows.PRReviewToolWindow",
+      "placement": "Floating",
+      "dockDirection": "None",
+      "allowAutoCreation": true,
+      "serviceMoniker": "Diffinitely.GeneratedToolWindowProvider;1.0"
+    }
+  ],
+  "commandSets": [
+    {
+      "name": "Diffinitely.ExtensionEntrypoint",
+      "serviceMoniker": {
+        "name": "Diffinitely.ExtensionEntrypointCommandSet",
+        "version": "1.0"
+      },
+      "commands": [
+        {
+          "tooltipText": "PR Review",
+          "flags": "None",
+          "icon": {
+            "IconName": "KnownMonikers.AboutBox",
+            "iconSettings": "IconAndText"
+          },
+          "name": "Diffinitely.PRReviewCommand",
+          "displayName": "PR Review",
+          "contextProviderName": "Editor,Shell"
+        }
+      ],
+      "dynamicCommandAnchors": []
+    }
+  ],
+  "services": [
+    {
+      "host": "dotnetExtensibility",
+      "name": "Diffinitely.ExtensionEntrypointCommandSet",
+      "serviceBaseDirectory": ".",
+      "serviceAudience": "Local | RemoteExclusiveClient",
+      "version": "1.0",
+      "entryPoint": {
+        "assemblyPath": "Diffinitely.dll",
+        "fullClassName": "Diffinitely.ExtensionEntrypoint"
+      },
+      "allowHostingInProcess": true
+    },
+    {
+      "host": "dotnetExtensibility",
+      "name": "Diffinitely.GeneratedToolWindowProvider",
+      "serviceBaseDirectory": ".",
+      "serviceAudience": "Local | RemoteExclusiveClient",
+      "version": "1.0",
+      "entryPoint": {
+        "assemblyPath": "Diffinitely.dll",
+        "fullClassName": "Diffinitely.ExtensionEntrypoint"
+      },
+      "allowHostingInProcess": true
+    }
+  ]
+}

@@ -45,6 +45,22 @@ namespace Diffinitely.Models
         public IAsyncCommand? OpenCommentsCommand { get; set; }
         [DataMember]
         public string? ChangeKind { get; set; }
+
+        private bool _isDeleted;
+        [DataMember]
+        public bool IsDeleted
+        {
+            get => _isDeleted;
+            set
+            {
+                if (_isDeleted != value)
+                {
+                    _isDeleted = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void RaisePropertyChanged([CallerMemberName] string? propName = null)

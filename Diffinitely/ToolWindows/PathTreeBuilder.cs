@@ -60,6 +60,7 @@ internal static class PathTreeBuilder
             {
                 node.CommentCount = fileInfo.CommentCount;
                 node.ChangeKind = fileInfo.Kind.ToString();
+                node.IsDeleted = fileInfo.Kind == ChangeKind.Deleted;
                 leafDecorator?.Invoke(node, fileInfo);
             }
 

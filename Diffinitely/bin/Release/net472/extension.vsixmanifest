@@ -1,0 +1,22 @@
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
+  <Metadata>
+    <Identity Id="Diffinitely.0b5613f8-f676-4c72-bfec-2179ab69445a" Version="1.0" Language="en-US" Publisher="Publisher name" />
+    <DisplayName>Diffinitely</DisplayName>
+    <Description>VisualStudio.Extensibility Extension with VSSDK Compatibility.</Description>
+    <Preview>true</Preview>
+  </Metadata>
+  <Installation ExtensionType="VSSDK+VisualStudio.Extensibility">
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.14,)">
+      <ProductArchitecture>amd64</ProductArchitecture>
+    </InstallationTarget>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.14,)">
+      <ProductArchitecture>arm64</ProductArchitecture>
+    </InstallationTarget>
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" Version="[4.5,)" />
+  </Dependencies>
+  <Prerequisites>
+    <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,)" DisplayName="Visual Studio core editor" />
+  </Prerequisites>
+</PackageManifest>
