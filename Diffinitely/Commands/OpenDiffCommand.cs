@@ -29,25 +29,49 @@ namespace Diffinitely.Commands
                 return;
             }
 
-            const __VSDIFFSERVICEOPTIONS options =
-                __VSDIFFSERVICEOPTIONS.VSDIFFOPT_LeftFileIsTemporary |
-                __VSDIFFSERVICEOPTIONS.VSDIFFOPT_DetectBinaryFiles;
-
             var baseContent = repoService.GetFileContentFromCommit(prInfo.RepoRoot, prInfo.BaseSha, fileInfo.Path);
+            var leftFile = Path.GetTempFileName() + Path.GetExtension(fileInfo.FullPath);
+            File.WriteAllText(leftFile, baseContent);
 
-            var fileName = Path.GetTempFileName() + Path.GetExtension(fileInfo.FullPath);
-            File.WriteAllText(fileName, baseContent);
+            if (fileInfo.Kind == Models.ChangeKind.Deleted)
+            {
+                // File no longer exists on disk — show base content on left, empty file on right.
+                var rightFile = Path.GetTempFileName() + Path.GetExtension(fileInfo.FullPath);
+                File.WriteAllText(rightFile, string.Empty);
 
-            diffService.OpenComparisonWindow2(
-               fileName,
-               fileInfo.FullPath,
-                "Pull Request",
-                "PR",
-                "Main",
-                "PR",
-                null,
-                null,
-                (uint)options);
+                const __VSDIFFSERVICEOPTIONS deletedOptions =
+                    __VSDIFFSERVICEOPTIONS.VSDIFFOPT_LeftFileIsTemporary |
+                    __VSDIFFSERVICEOPTIONS.VSDIFFOPT_RightFileIsTemporary |
+                    __VSDIFFSERVICEOPTIONS.VSDIFFOPT_DetectBinaryFiles;
+
+                diffService.OpenComparisonWindow2(
+                    leftFile,
+                    rightFile,
+                    "Pull Request",
+                    "PR",
+                    fileInfo.Path + " (deleted)",
+                    "(deleted)",
+                    null,
+                    null,
+                    (uint)deletedOptions);
+            }
+            else
+            {
+                const __VSDIFFSERVICEOPTIONS options =
+                    __VSDIFFSERVICEOPTIONS.VSDIFFOPT_LeftFileIsTemporary |
+                    __VSDIFFSERVICEOPTIONS.VSDIFFOPT_DetectBinaryFiles;
+
+                diffService.OpenComparisonWindow2(
+                    leftFile,
+                    fileInfo.FullPath,
+                    "Pull Request",
+                    "PR",
+                    "Main",
+                    "PR",
+                    null,
+                    null,
+                    (uint)options);
+            }
         }
     }
 }
