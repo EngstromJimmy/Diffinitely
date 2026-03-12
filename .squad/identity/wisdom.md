@@ -9,3 +9,4 @@ Reusable patterns and heuristics learned through work. NOT transcripts — each 
 ## Patterns
 
 <!-- Append entries below. Format: **Pattern:** description. **Context:** when it applies. -->
+**Pattern:** In item-template action bars, only show or enable buttons when the bound command is actually available. **Context:** WPF/MVVM lists where per-row commands are nullable or depend on backend capability; avoid false affordances like visible no-op buttons.

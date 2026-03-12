@@ -25,10 +25,9 @@ Describe a key convention or practice used in this codebase. Be specific about w
 
 ### Testing
 
-<!-- Example: What test framework? Where do tests live? How to run them? -->
-<!-- - Test framework: Jest/Vitest/node:test/etc. -->
-<!-- - Test location: test/, __tests__/, *.test.ts, etc. -->
-<!-- - Run command: npm test, etc. -->
+- Test framework: xUnit in `Diffinitely.Tests/`, currently targeting `net472` to match the VSIX project.
+- Run targeted tests with `dotnet test Diffinitely.Tests\Diffinitely.Tests.csproj --nologo --no-restore`.
+- For view-model-driven UI actions, test both presentation and wiring: if a button is visible for a state, the backing command must be non-null and the resulting state transition must be asserted.
 
 ### Code Style
 
@@ -54,3 +53,4 @@ Describe a key convention or practice used in this codebase. Be specific about w
 
 <!-- List things to avoid in this codebase -->
 - **[Anti-pattern]** — Explanation of what not to do and why.
+- **Visible no-op actions** — Do not expose a button in XAML unless the view model reliably supplies a command or intentionally disables/hides it. Test the unhappy path too, especially around GitHub-backed actions such as comment resolution.

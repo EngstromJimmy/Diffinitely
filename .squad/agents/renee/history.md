@@ -18,6 +18,11 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-03-12 — Comment action wiring needs explicit coverage
+
+- The comments list can present actions that are only partially implemented. `PRReviewRemoteUserControl.xaml` binds a visible `Resolve` button to `PrCommentItem.ResolveCommand`, but `PRReviewViewModel` currently leaves that command unset.
+- Existing tests only cover tree-building. There is no automated coverage for comment action wiring, command nullability, or resolved/unresolved behavior after a user action.
+
 ### 2026-03-07 — Test project bootstrap
 
 - The main project targets **net472** (not .NET 8). Test projects must also target net472 to use a project reference; targeting net8.0 is incompatible.
