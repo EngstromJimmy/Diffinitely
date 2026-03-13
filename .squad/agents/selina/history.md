@@ -47,3 +47,18 @@
 
 - **Dot-folder collapse (Issue #1):** In `AddPath` on `PRReviewViewModel.cs`, `TreeNode.IsExpanded` is set inline at creation time. The pattern `!isLeaf && !segment.StartsWith('.')` is the right place to gate default expansion — no XAML triggers or style setters needed for this kind of initial-state logic.
 - **Comments-tab action affordances:** In `PRReviewRemoteUserControl.xaml`, comment-row actions are rendered directly from per-item command properties on `PrCommentItem`. If an action button binds to a nullable command, the view must also reflect capability state (hide or disable it) or the UI will advertise a no-op.
+- **True review-thread rendering (Issue #10):** In the comments pane, nested replies need to be attached by walking `InReplyToId` back to the true top-level comment. Grouping separate top-level comments by `FilePath + Line` is unsafe because it invents threads GitHub does not actually have.
+
+---
+
+## Issue #10 Team Completion Summary
+
+**Completed:** 2026-03-13  
+**Implementation batch:** Lucius (backend), Selina (frontend), Renee (testing) — all work streams synchronized and passing.
+
+**Team outcomes:**
+- Lucius delivered `ResolveCommand`, thread-ID capture, and GraphQL mutation wiring
+- Selina delivered comments-pane ancestry rendering, action visibility, and post-resolve refresh with filter preservation
+- Renee delivered regression coverage for happy path, failure handling, refresh/filter correctness, and thread ancestry protection
+- All acceptance criteria met; feature production-ready
+- **Filter-safe refresh after resolve:** When a comment action changes server-backed resolution state, preserve the current author/status filters before reloading and restore them afterward. That keeps resolved/unresolved views honest without requiring fragile per-item property-change plumbing.

@@ -18,7 +18,7 @@
 
 ### 2026-03-13 — Issue #10 Testing (Resolve Button)
 
-**Status:** Assigned — Orchestration log created, waiting for Lucius/Selina completion.
+**Status:** Completed — resolve-flow regression coverage added and passing.
 
 **Scope:**
 - Test resolve action availability (with/without thread ID, resolved/unresolved states)
@@ -39,10 +39,28 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-03-13 — Resolve flow coverage can stay fast without VS-hosted tests
+
+- The resolve feature can be covered with plain xUnit by faking `GitHubPullRequestService`, constructing Octokit review comments directly, and invoking the internal view model via reflection. That exercises reload/filter behavior without needing a running Visual Studio host.
+- For issue #10 specifically, the regression bar now includes: successful resolve refresh, failed resolve preserving unresolved UI state, hidden resolve affordances when thread metadata is missing, and protection against merging separate top-level threads that happen to share file/line coordinates.
+
 ### 2026-03-12 — Comment action wiring needs explicit coverage
 
 - The comments list can present actions that are only partially implemented. `PRReviewRemoteUserControl.xaml` binds a visible `Resolve` button to `PrCommentItem.ResolveCommand`, but `PRReviewViewModel` currently leaves that command unset.
 - Existing tests only cover tree-building. There is no automated coverage for comment action wiring, command nullability, or resolved/unresolved behavior after a user action.
+
+---
+
+## Issue #10 Team Completion Summary
+
+**Completed:** 2026-03-13  
+**Implementation batch:** Lucius (backend), Selina (frontend), Renee (testing) — all work streams synchronized and passing.
+
+**Team outcomes:**
+- Lucius delivered `ResolveCommand`, thread-ID capture, and GraphQL mutation wiring
+- Selina delivered comments-pane ancestry rendering, action visibility, and post-resolve refresh with filter preservation
+- Renee delivered regression coverage for happy path, failure handling, refresh/filter correctness, and thread ancestry protection
+- All acceptance criteria met; feature production-ready
 
 ### 2026-03-07 — Test project bootstrap
 

@@ -39,3 +39,18 @@
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
+- GitHub review-thread actions in Diffinitely must carry the GraphQL review thread node ID from the service layer into `PrCommentItem`; REST comment IDs are not enough to drive `resolveReviewThread`.
+- For comment resolution, the safest production behavior is: execute the GraphQL mutation, only treat success as authoritative when GitHub echoes the same thread ID back as resolved, then reload comments from the server so filters and action visibility stay truthful.
+
+---
+
+## Issue #10 Team Completion Summary
+
+**Completed:** 2026-03-13  
+**Implementation batch:** Lucius (backend), Selina (frontend), Renee (testing) — all work streams synchronized and passing.
+
+**Team outcomes:**
+- Lucius delivered `ResolveCommand`, thread-ID capture, and GraphQL mutation wiring
+- Selina delivered comments-pane ancestry rendering, action visibility, and post-resolve refresh with filter preservation
+- Renee delivered regression coverage for happy path, failure handling, refresh/filter correctness, and thread ancestry protection
+- All acceptance criteria met; feature production-ready

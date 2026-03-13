@@ -2,6 +2,57 @@
 
 ## Active Decisions
 
+### Decision: Issue #10 Backend Implementation Complete
+
+**Author:** Lucius (Backend Dev)  
+**Date:** 2026-03-13  
+**Related Issue:** #10 — Resolve button in comments view appears non-functional  
+**Status:** Complete
+
+**Summary:** Backend half of issue #10 is end-to-end wired. Service-layer support exists to fetch GitHub review thread node IDs, resolve a review thread by node ID, and report mutation failures.
+
+**What changed:**
+- `GitHubPullRequestService` loads review thread metadata from GraphQL (thread node ID, resolved state) via extended `GetReviewThreadResolutionAsync`
+- `PullRequestInfo` carries explicit review-thread metadata dictionary keyed by top-level comment database ID
+- `PrCommentItem` carries `ReviewThreadId` for mutations
+- `ResolveCommand` added as production-ready `IAsyncCommand` (validates thread ID, reports failures, reloads on success)
+- `PRReviewViewModel` wires resolve actions against thread IDs; no longer merges threads by file+line
+
+---
+
+### Decision: Issue #10 Frontend Implementation Complete
+
+**Author:** Selina (Frontend Dev)  
+**Date:** 2026-03-13  
+**Related Issue:** #10 — Resolve button in comments view appears non-functional  
+**Status:** Complete
+
+**Summary:** Frontend implementation complete. Comments pane renders GitHub ancestry as source of truth for threads. Resolve button only visible when actionable. Post-resolve reload preserves filters.
+
+**What changed:**
+- Comments pane treats GitHub reply ancestry as source of truth; removed file+line regrouping
+- `Resolve` renders only when item has valid review-thread ID and non-null command
+- After successful resolve, reload comments from service and restore current author/status filters
+
+---
+
+### Decision: Issue #10 Testing Complete
+
+**Author:** Renee (Tester)  
+**Date:** 2026-03-13  
+**Related Issue:** #10 — Resolve button in comments view appears non-functional  
+**Status:** Complete
+
+**Summary:** Full regression coverage for resolve flow. Happy path, failure handling, refresh/filter correctness, and thread ancestry protection all tested and passing.
+
+**Coverage delivered:**
+1. Successful resolve reloads from GitHub and keeps filters intact
+2. Failed resolve leaves comment unresolved; no refresh hiding failure
+3. Distinct top-level threads remain separate; resolve cannot drift
+4. Missing thread metadata suppresses resolve affordance entirely
+
+---
+
 ### Decision: Test Project Created at Diffinitely.Tests/
 
 **Author:** Renee (Tester)  
