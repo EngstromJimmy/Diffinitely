@@ -48,3 +48,9 @@ The GitHub service already reads review-thread resolution state, but it currentl
 - The current fallback grouping by `(FilePath, Line)` in `PRReviewViewModel` is structurally unsafe for thread actions because it can merge separate GitHub review threads; thread identity must come from GitHub relationships, not inferred UI grouping.
 - For the first implementation, a successful resolve should trigger a reload of the comments data rather than relying on optimistic local mutation alone. That keeps resolved/unresolved filters correct and avoids remote-UI property change surprises.
 - Execution can start immediately with a clean split: Lucius owns service/model/command plumbing, Selina owns view-model wiring and command visibility, Renee owns regression coverage for successful resolve, hidden/disabled unsupported states, filter refresh, and failure handling.
+
+### Issue #10 push review (2026-03-13)
+
+- Reviewed the working tree against the approved issue #10 design and found it aligned: thread identity is carried from GraphQL into `PrCommentItem`, command visibility is guarded by actual capability, and comment-thread construction now follows GitHub reply ancestry instead of file+line inference.
+- Validation bar for a push on this code path should include `dotnet test .\Diffinitely.slnx --nologo`, not just the targeted test project, because the VSIX build and test assembly reference wiring both matter for this feature.
+- One non-blocking gap remains: `ResolveCommand`'s "mutation succeeded but refresh failed" status path is still untested, so future follow-up should cover that defensive branch without holding the push.

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
 using Microsoft.VisualStudio.Extensibility.UI;
 
@@ -7,6 +7,9 @@ namespace Diffinitely.Models;
 [DataContract]
 public class PrCommentItem
 {
+    [DataMember]
+    public long CommentId { get; set; }
+
     [DataMember]
     public string FilePath { get; set; } = "";
 
@@ -28,11 +31,14 @@ public class PrCommentItem
     [DataMember]
     public bool IsResolved { get; set; }
 
-    // Thread replies (same file/line); simple body/author/time list
+    [DataMember]
+    public string ReviewThreadId { get; set; } = "";
+
+    [DataMember]
+    public bool CanResolve { get; set; }
+
     [DataMember]
     public ObservableCollection<PrCommentReply> ThreadReplies { get; set; } = new();
-
-    // commands
 
     [DataMember] public IAsyncCommand? ResolveCommand { get; set; }
     [DataMember] public IAsyncCommand? ViewCommand { get; set; }
@@ -45,4 +51,3 @@ public class PrCommentReply
     [DataMember] public DateTimeOffset CreatedAt { get; set; }
     [DataMember] public string Body { get; set; } = "";
 }
-

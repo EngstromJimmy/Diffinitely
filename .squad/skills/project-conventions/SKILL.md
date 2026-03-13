@@ -31,6 +31,7 @@ When a UI action changes server-backed state that also drives filtering or visib
 
 - Test framework: xUnit in `Diffinitely.Tests/`, currently targeting `net472` to match the VSIX project.
 - Run targeted tests with `dotnet test Diffinitely.Tests\Diffinitely.Tests.csproj --nologo --no-restore`.
+- Before pushing cross-cutting changes that touch both the VSIX project and the test project, validate with `dotnet test .\Diffinitely.slnx --nologo` so package references, build wiring, and test execution are checked together.
 - For view-model-driven UI actions, test both presentation and wiring: if a button is visible for a state, the backing command must be non-null and the resulting state transition must be asserted.
 - For GitHub-backed comment actions, assert that the model carries every identifier required by the mutation before the action is shown. Review-thread actions require thread-level IDs, not just comment IDs.
 - When VS Extensibility framework types make direct unit-test construction awkward, prefer driving internal view models through reflection plus fake services rather than pulling extra VS SDK packages into the test project. That keeps tests offline and avoids turning the xUnit project into another VSIX-style build.
