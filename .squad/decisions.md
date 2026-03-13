@@ -184,6 +184,25 @@
 
 ---
 
+### Decision: Issue #10 Branch Safe to Push
+
+**Author:** Bruce (Lead)  
+**Date:** 2026-03-13  
+**Related Issue:** #10 — Resolve button in comments view appears non-functional  
+**Status:** Complete
+
+**Summary:** Issue #10 branch reviewed and approved for cross-machine testing. Implementation is coherent end-to-end and scoped to resolve-thread support plus its tests.
+
+**Why pushing is safe:**
+- `GitHubPullRequestService` carries GitHub review-thread IDs and resolved state from GraphQL
+- `PRReviewViewModel` rebuilds comment threads from GitHub reply ancestry via `CommentThreadBuilder`
+- Comments UI only exposes Resolve affordance when thread ID and command exist
+- `dotnet test .\Diffinitely.slnx --nologo` passed before push
+
+**Known non-blocking follow-up:** Add test for resolve-success + reload-failure path.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus

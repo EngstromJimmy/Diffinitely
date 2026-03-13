@@ -62,7 +62,9 @@
 - Renee delivered regression coverage for happy path, failure handling, refresh/filter correctness, and thread ancestry protection
 - All acceptance criteria met; feature production-ready
 
-### 2026-03-07 — Test project bootstrap
+**Push authorized and executed:** Bruce reviewed working tree against approved design, ran `dotnet test` successfully, and pushed `squad/remove-squad-product-workflows` to origin. Remote status clean. Documented in decisions.md as "Issue #10 Branch Safe to Push."
+
+**Non-blocking caveat:** `ResolveCommand` resolve-success + reload-failure path remains untested; follow-up should cover this defensive branch.
 
 - The main project targets **net472** (not .NET 8). Test projects must also target net472 to use a project reference; targeting net8.0 is incompatible.
 - `PRReviewViewModel` is `internal`. Added `InternalsVisibleTo("Diffinitely.Tests")` via an `<AssemblyAttribute>` item in the main `.csproj` (SDK-style; no AssemblyInfo.cs needed).
