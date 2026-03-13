@@ -105,6 +105,34 @@
 
 ---
 
+### Decision: Issue #10 MVP architecture and execution split are approved
+
+**Author:** Bruce (Lead)  
+**Date:** 2026-03-13  
+**Related Issue:** #10 — Resolve button in comments view appears non-functional
+
+**Summary:** Safe minimum viable path to wire review-thread resolution end-to-end from comments UI. Design approved, execution starts now.
+
+**Approved architecture:**
+
+1. **Service is source of truth for thread actions** — Extend `GitHubPullRequestService` GraphQL thread query to return `isResolved` and review thread node `id`. Carry thread metadata into `PullRequestInfo`. Add `resolveReviewThread` GraphQL mutation method.
+2. **Comments model must carry thread identity** — Add `ReviewThreadId` to `PrCommentItem`. Only create resolve action when valid thread ID present.
+3. **ViewModel must not infer threads by file+line** — Keep reply wiring based on GitHub comment relationships; remove grouping pass that can collapse separate threads.
+4. **After successful resolve, reload comments from GitHub** — Minimum-risk behavior guarantees resolved state, button visibility, and filters reflect server truth.
+
+**Implementation split:**
+- **Lucius:** Backend/service (GraphQL thread-ID query, models, ResolveCommand, mutation)
+- **Selina:** Frontend/ViewModel (populate thread IDs, wire command, remove grouping, refresh post-resolve)
+- **Renee:** Tests (success, failure, refresh, action availability, filter correctness)
+
+**Risks respected:**
+- `resolveReviewThread` requires GraphQL thread node ID, not REST comment ID
+- Current query uses `first:100` with no pagination; large PRs can exceed; known follow-up risk
+- If auth unavailable or GraphQL fails, UI must hide/disable resolve, not pretend to work
+- Silent failure unacceptable; if mutation fails, item does not flip locally
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus

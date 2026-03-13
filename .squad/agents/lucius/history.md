@@ -16,6 +16,26 @@
 - `Diffinitely/Commands/OpenForReviewCommand.cs` — open for review command
 - `Diffinitely/PRReviewCommand.cs` — PR review command
 
+## Current Work
+
+### 2026-03-13 — Issue #10 Backend (Resolve Button)
+
+**Status:** Assigned — Orchestration log created, ready to execute.
+
+**Scope:**
+- Extend `GitHubPullRequestService.GetReviewThreadResolutionAsync` to capture thread node IDs
+- Update `PullRequestInfo` model with thread metadata dictionary
+- Add `ReviewThreadId` field to `PrCommentItem`
+- Implement `resolveReviewThread` GraphQL mutation method
+- Create `ResolveCommand` class implementing `IAsyncCommand`
+
+**Coordination:**
+- Selina (Frontend): Will wire command in ViewModel post-completion
+- Renee (Tester): Will cover success/failure/refresh with regression tests
+- Bruce (Lead): Design authority
+
+**Authority:** Bruce (Lead) — design approved, execution authorized.
+
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->

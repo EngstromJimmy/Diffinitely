@@ -14,6 +14,27 @@
 - Fixed compile errors: `StartsWith(char)` → `StartsWith(string)` for net472
 - All 5 tests passing; coordinated with Selina; ready for team review
 
+## Current Work
+
+### 2026-03-13 — Issue #10 Testing (Resolve Button)
+
+**Status:** Assigned — Orchestration log created, waiting for Lucius/Selina completion.
+
+**Scope:**
+- Test resolve action availability (with/without thread ID, resolved/unresolved states)
+- Test successful resolve execution, mutation, and response handling
+- Test post-resolve refresh and filter updates
+- Test failure paths (missing auth, GraphQL error, metadata gaps)
+- Regression test preventing accidental file+line thread merging
+- Verify no false affordances in UI
+
+**Coordination:**
+- Lucius (Backend): Will provide command and mutation implementation
+- Selina (Frontend): Will provide command wiring and refresh handler
+- Bruce (Lead): Design authority — acceptance bar set
+
+**Authority:** Bruce (Lead) — design approved, execution authorized.
+
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
