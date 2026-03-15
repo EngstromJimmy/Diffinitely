@@ -12,45 +12,76 @@ namespace Diffinitely.ToolWindows;
 [DataContract]
 internal class PRReviewViewModel : INotifyPropertyChanged
 {
-    // services we already need
     private readonly GitHubPullRequestService _prService;
     private readonly VisualStudioExtensibility _visualStudioExtensibility;
     private readonly GitRepositoryService _repoService;
 
-    // this is the command the Refresh button will bind to
+    private bool _isLoading;
+    private string _loadingText = "Loading pull request...";
+    private string _status = string.Empty;
+    private string? _selectedAuthor;
+    private string? _selectedResolutionFilter = "<All>";
+
     [DataMember]
     public IAsyncCommand RefreshCommand { get; }
+
     [DataMember]
     public ObservableCollection<string> AllAuthors { get; } = new();
-    // this is just so we can show an icon in the Refresh button (optional but nice)
+
     [DataMember]
     public ImageMoniker RefreshIcon { get; } = ImageMoniker.KnownValues.Refresh;
 
     [DataMember]
     public ObservableCollectionEx<PrCommentItem> AllComments { get; } = new();
+
     [DataMember]
     public ObservableCollectionEx<PrCommentItem> FilteredComments { get; } = new();
+
     [DataMember]
     public ObservableCollectionEx<TreeNode> Roots { get; } = [];
 
-    // Loading indicator properties
-    private bool _isLoading;
     [DataMember]
     public bool IsLoading
     {
         get => _isLoading;
-        set { if (_isLoading != value) { _isLoading = value; RaisePropertyChanged(nameof(IsLoading)); } }
+        set
+        {
+            if (_isLoading != value)
+            {
+                _isLoading = value;
+                RaisePropertyChanged(nameof(IsLoading));
+            }
+        }
     }
-    private string _loadingText = "Loading pull request...";
+
     [DataMember]
     public string LoadingText
     {
         get => _loadingText;
-        set { if (_loadingText != value) { _loadingText = value; RaisePropertyChanged(nameof(LoadingText)); } }
+        set
+        {
+            if (_loadingText != value)
+            {
+                _loadingText = value;
+                RaisePropertyChanged(nameof(LoadingText));
+            }
+        }
     }
 
-    // currently selected author from the ComboBox
-    private string? _selectedAuthor;
+    [DataMember]
+    public string Status
+    {
+        get => _status;
+        set
+        {
+            if (_status != value)
+            {
+                _status = value;
+                RaisePropertyChanged(nameof(Status));
+            }
+        }
+    }
+
     [DataMember]
     public string? SelectedAuthor
     {
@@ -66,11 +97,9 @@ internal class PRReviewViewModel : INotifyPropertyChanged
         }
     }
 
-    // resolution status filter
     [DataMember]
     public ObservableCollection<string> AllResolutionFilters { get; } = new() { "<All>", "Unresolved", "Resolved" };
 
-    private string? _selectedResolutionFilter = "<All>";
     [DataMember]
     public string? SelectedResolutionFilter
     {
@@ -85,9 +114,9 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             }
         }
     }
+
     public event PropertyChangedEventHandler? PropertyChanged;
-    private void RaisePropertyChanged(string propName) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
+
     public PRReviewViewModel(
         GitHubPullRequestService prService,
         GitRepositoryService repoService,
@@ -96,7 +125,6 @@ internal class PRReviewViewModel : INotifyPropertyChanged
         _prService = prService;
         _visualStudioExtensibility = visualStudioExtensibility;
         _repoService = repoService;
-
         RefreshCommand = new AsyncCommand(ExecuteRefreshAsync);
     }
 
@@ -104,6 +132,18 @@ internal class PRReviewViewModel : INotifyPropertyChanged
     {
         await ReloadTreeInternalAsync(cancellationToken);
     }
+
+    public ObservableCollection<TreeNode> BuildTreeFromPaths(IEnumerable<ChangedFileInfo> files, PullRequestInfo prInfo)
+    {
+        return PathTreeBuilder.Build(files, (node, fi) =>
+        {
+            node.OpenCommentsCommand = new OpenForReviewCommand(_visualStudioExtensibility, fi.FullPath);
+            node.OpenCommand = new OpenDiffCommand(fi, prInfo, _repoService);
+        });
+    }
+
+    private void RaisePropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
     private async Task ExecuteRefreshAsync(
         object? parameter,
@@ -117,12 +157,18 @@ internal class PRReviewViewModel : INotifyPropertyChanged
     {
         IsLoading = true;
         LoadingText = "Loading pull request...";
+        Status = string.Empty;
+
+        var selectedAuthor = string.IsNullOrWhiteSpace(SelectedAuthor) ? "<All>" : SelectedAuthor!;
+        var selectedResolutionFilter = string.IsNullOrWhiteSpace(SelectedResolutionFilter)
+            ? "<All>"
+            : SelectedResolutionFilter!;
+
         try
         {
             var pr = await _prService.GetCurrentBranchPullRequestAsync(cancellationToken);
             if (pr == null)
             {
-                // no PR? clear tree
                 Roots.Clear();
                 LoadingText = "No pull request for current branch.";
                 return;
@@ -131,7 +177,6 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             LoadingText = "Loading changed files...";
             var built = BuildTreeFromPaths(pr.ChangedFiles, pr);
 
-            //Add treeview
             Roots.Clear();
             Roots.SupressNotification = true;
             foreach (var node in built)
@@ -141,130 +186,86 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             Roots.SupressNotification = false;
 
             LoadingText = "Loading comments...";
-            //Add comments
             AllComments.Clear();
             FilteredComments.Clear();
             AllComments.SupressNotification = true;
             FilteredComments.SupressNotification = true;
 
-            // Build comment items first (one per raw comment)
-            var tempMap = new Dictionary<long, PrCommentItem>();
-            foreach (var c in pr.Comments.OrderBy(c => c.CreatedAt))
-            {
-                var item = new PrCommentItem
+            var commentItems = CommentThreadBuilder.Build(
+                pr.Comments.Select(comment => new CommentThreadBuilder.CommentSnapshot(
+                    comment.Id,
+                    comment.Path ?? string.Empty,
+                    comment.Position,
+                    comment.User?.Login ?? string.Empty,
+                    comment.CreatedAt,
+                    comment.Body ?? string.Empty,
+                    comment.User?.AvatarUrl ?? string.Empty,
+                    comment.InReplyToId)),
+                pr.ReviewThreads.ToDictionary(
+                    entry => entry.Key,
+                    entry => new CommentThreadBuilder.ReviewThreadState(entry.Value.Id, entry.Value.IsResolved)),
+                comment => string.IsNullOrWhiteSpace(comment.FilePath)
+                    ? null
+                    : new OpenForReviewCommand(_visualStudioExtensibility, $"{pr.RepoRoot}\\{comment.FilePath}"),
+                (item, _, threadState) =>
                 {
-                    FilePath = c.Path ?? "",
-                    Line = c.Position,
-                    Author = c.User?.Login ?? "",
-                    CreatedAt = c.CreatedAt,
-                    Body = c.Body ?? "",
-                    AuthorAvatarUrl = c.User?.AvatarUrl ?? "",
-                    IsResolved = pr.ThreadResolution.TryGetValue(c.Id, out var resolved) && resolved,
-                    ViewCommand = new OpenForReviewCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path),
-                    //ResolveCommand = new ResolveCommand(_visualStudioExtensibility, pr.RepoRoot + "\\" + c.Path)
-                };
-                tempMap[c.Id] = item;
-            }
-            // Link replies using InReplyToId (GitHub provides direct parent id)
-            foreach (var c in pr.Comments.OrderBy(c => c.CreatedAt))
-            {
-                if (c.InReplyToId.HasValue && tempMap.TryGetValue(c.InReplyToId.Value, out var parent))
-                {
-                    // Append as reply to parent (flatten multi-level by always attaching to direct parent)
-                    var replyItem = tempMap[c.Id];
-                    parent.ThreadReplies.Add(new PrCommentReply { Author = replyItem.Author, CreatedAt = replyItem.CreatedAt, Body = replyItem.Body });
-                }
-            }
-            // Add only top-level comments (no InReplyToId) to AllComments
-            foreach (var c in pr.Comments.Where(cm => !cm.InReplyToId.HasValue).OrderBy(cm => cm.CreatedAt))
-            {
-                AllComments.Add(tempMap[c.Id]);
-            }
-
-            // build threads (group by file+line)
-            foreach (var group in AllComments.GroupBy(cm => (cm.FilePath, cm.Line)))
-            {
-                var ordered = group.OrderBy(g => g.CreatedAt).ToList();
-                if (ordered.Count > 1)
-                {
-                    // treat first as root, attach rest as replies
-                    var root = ordered[0];
-                    for (int i = 1; i < ordered.Count; i++)
+                    if (threadState is null ||
+                        threadState.IsResolved ||
+                        string.IsNullOrWhiteSpace(threadState.ReviewThreadId))
                     {
-                        var reply = ordered[i];
-                        root.ThreadReplies.Add(new PrCommentReply
-                        {
-                            Author = reply.Author,
-                            CreatedAt = reply.CreatedAt,
-                            Body = reply.Body
-                        });
+                        return null;
                     }
-                }
+
+                    return new ResolveCommand(
+                        _prService,
+                        item,
+                        ReloadTreeInternalAsync,
+                        message => Status = message);
+                });
+
+            foreach (var item in commentItems)
+            {
+                AllComments.Add(item);
             }
 
-            // Build authors list ("All" + distinct names)
             AllAuthors.Clear();
             AllAuthors.Add("<All>");
             foreach (var authorName in AllComments
-                .Select(c => c.Author)
-                .Where(a => !string.IsNullOrWhiteSpace(a))
-                .Distinct()
-                .OrderBy(a => a))
+                         .Select(c => c.Author)
+                         .Where(a => !string.IsNullOrWhiteSpace(a))
+                         .Distinct()
+                         .OrderBy(a => a))
             {
                 AllAuthors.Add(authorName);
             }
 
-            // Default filter: show all
-            SelectedAuthor = "<All>";
-            SelectedResolutionFilter = "<All>";
             AllComments.SupressNotification = false;
             FilteredComments.SupressNotification = false;
+            _selectedAuthor = AllAuthors.Contains(selectedAuthor) ? selectedAuthor : "<All>";
+            _selectedResolutionFilter = AllResolutionFilters.Contains(selectedResolutionFilter)
+                ? selectedResolutionFilter
+                : "<All>";
+            RaisePropertyChanged(nameof(SelectedAuthor));
+            RaisePropertyChanged(nameof(SelectedResolutionFilter));
             ApplyFilter();
         }
         finally
         {
             IsLoading = false;
         }
+
         RaisePropertyChanged(nameof(Roots));
         RaisePropertyChanged(nameof(AllComments));
-    }
-
-    //
-    // build tree (folders + file leaves)
-    //
-    public ObservableCollection<TreeNode> BuildTreeFromPaths(IEnumerable<ChangedFileInfo> files, PullRequestInfo prInfo)
-    {
-        return PathTreeBuilder.Build(files, (node, fi) =>
-        {
-            node.OpenCommentsCommand = new OpenForReviewCommand(_visualStudioExtensibility, fi.FullPath);
-            node.OpenCommand = new OpenDiffCommand(fi, prInfo, _repoService);
-        });
     }
 
     private void ApplyFilter()
     {
         FilteredComments.Clear();
 
-        IEnumerable<PrCommentItem> source = AllComments;
-
-        if (!string.IsNullOrEmpty(SelectedAuthor) &&
-            SelectedAuthor != "<All>")
-        {
-            source = source.Where(c => c.Author == SelectedAuthor);
-        }
-
-        if (SelectedResolutionFilter == "Resolved")
-        {
-            source = source.Where(c => c.IsResolved);
-        }
-        else if (SelectedResolutionFilter == "Unresolved")
-        {
-            source = source.Where(c => !c.IsResolved);
-        }
-
-        // We could sort here too (e.g. newest first)
-        foreach (var item in source
-            .OrderByDescending(c => c.CreatedAt))
+        foreach (var item in CommentThreadBuilder.FilterComments(
+                     AllComments,
+                     SelectedAuthor,
+                     SelectedResolutionFilter))
         {
             FilteredComments.Add(item);
         }

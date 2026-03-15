@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
     <IsPackable>false</IsPackable>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +20,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Diffinitely\Diffinitely.csproj" />
+    <Reference Include="Microsoft.VisualStudio.Extensibility.Framework">
+      <HintPath>$(NuGetPackageRoot)microsoft.visualstudio.extensibility.framework\17.14.2098\lib\net472\Microsoft.VisualStudio.Extensibility.Framework.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

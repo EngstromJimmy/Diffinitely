@@ -2,11 +2,32 @@ using Diffinitely.Models;
 using Octokit;
 using System.Diagnostics;
 using System.Text;
+using System.IO;
+using System.Net.Http;
+using System.Text.Json;
 
 namespace Diffinitely.Services
 {
+    internal sealed class ReviewThreadMutationResult
+    {
+        private ReviewThreadMutationResult(bool succeeded, string? errorMessage)
+        {
+            Succeeded = succeeded;
+            ErrorMessage = errorMessage;
+        }
+
+        public bool Succeeded { get; }
+
+        public string? ErrorMessage { get; }
+
+        public static ReviewThreadMutationResult Success() => new(true, null);
+
+        public static ReviewThreadMutationResult Failure(string message) => new(false, message);
+    }
+
     internal class GitHubPullRequestService
     {
+        private static readonly HttpClient _graphQlHttpClient = new();
         private readonly GitRepositoryService _repoService = new();
         private readonly GitHubClient _client = new(new ProductHeaderValue("DiffinitelyPRHelper"));
         private static string _cachedToken = string.Empty; // in-memory cache
@@ -75,7 +96,7 @@ namespace Diffinitely.Services
             }
         }
 
-        public async Task<PullRequestInfo> GetCurrentBranchPullRequestAsync(CancellationToken ct)
+        public virtual async Task<PullRequestInfo> GetCurrentBranchPullRequestAsync(CancellationToken ct)
         {
             // Resolve repo info from local .git metadata.
             string repoRoot; try { repoRoot = _repoService.FindRepoRoot(System.Environment.CurrentDirectory); } catch { return null; }
@@ -102,8 +123,8 @@ namespace Diffinitely.Services
                 var numberOfComments = comments.Count(c => c.Path == f.FileName);
                 changed.Add(new ChangedFileInfo { CommentCount = numberOfComments, FullPath = $"{repoRoot}\\{f.FileName}", Path = f.FileName, PreviousPath = f.PreviousFileName, Kind = kind });
             }
-            var threadResolution = await GetReviewThreadResolutionAsync(owner, repo, pr.Number, ct);
-            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot, ThreadResolution = threadResolution };
+            var reviewThreads = await GetReviewThreadsAsync(owner, repo, pr.Number, ct);
+            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot, ReviewThreads = reviewThreads };
         }
 
         public async Task<string?> GetFileContentAsync(string owner, string repo, string path, string sha, CancellationToken ct)
@@ -117,70 +138,225 @@ namespace Diffinitely.Services
             catch { return null; }
         }
 
-        /// <summary>
-        /// Queries the GitHub GraphQL API to get the resolved status of each review thread.
-        /// Returns a dictionary mapping the first comment's database ID to its thread's isResolved flag.
-        /// </summary>
-        internal async Task<Dictionary<long, bool>> GetReviewThreadResolutionAsync(
-            string owner, string repo, int prNumber, CancellationToken ct)
+        internal virtual async Task<ReviewThreadMutationResult> ResolveReviewThreadAsync(string reviewThreadId, CancellationToken ct)
         {
-            var result = new Dictionary<long, bool>();
+            if (string.IsNullOrWhiteSpace(reviewThreadId))
+            {
+                return ReviewThreadMutationResult.Failure("The review thread is missing its GitHub thread ID.");
+            }
 
-            var token = _cachedToken;
-            if (string.IsNullOrEmpty(token))
-                token = _client.Credentials?.Password;
-            if (string.IsNullOrEmpty(token))
-                return result;
+            if (!await EnsureCredentialsAsync(ct))
+            {
+                return ReviewThreadMutationResult.Failure("GitHub authentication is unavailable, so the review thread could not be resolved.");
+            }
 
-            var query = "query($owner:String!,$repo:String!,$number:Int!){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved comments(first:1){nodes{databaseId}}}}}}}";
+            var query = "mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}";
 
             try
             {
-                using var httpClient = new System.Net.Http.HttpClient();
-                httpClient.DefaultRequestHeaders.Add("Authorization", $"token {token}");
-                httpClient.DefaultRequestHeaders.Add("User-Agent", "DiffinitelyPRHelper");
-
-                var requestBody = System.Text.Json.JsonSerializer.Serialize(new
+                using var response = await PostGraphQlAsync(query, new { threadId = reviewThreadId }, ct);
+                if (!response.IsSuccessStatusCode)
                 {
-                    query,
-                    variables = new { owner, repo, number = prNumber }
-                });
-
-                var content = new System.Net.Http.StringContent(requestBody, Encoding.UTF8, "application/json");
-                var response = await httpClient.PostAsync("https://api.github.com/graphql", content, ct);
-
-                if (!response.IsSuccessStatusCode) return result;
+                    return ReviewThreadMutationResult.Failure($"GitHub returned {(int)response.StatusCode} ({response.ReasonPhrase}) while resolving the review thread.");
+                }
 
                 var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
 
-                using var doc = System.Text.Json.JsonDocument.Parse(json);
-                if (!doc.RootElement.TryGetProperty("data", out var data)) return result;
-                if (!data.TryGetProperty("repository", out var repository)) return result;
-                if (!repository.TryGetProperty("pullRequest", out var pullRequest)) return result;
-                if (!pullRequest.TryGetProperty("reviewThreads", out var reviewThreads)) return result;
-                if (!reviewThreads.TryGetProperty("nodes", out var nodes)) return result;
-
-                foreach (var thread in nodes.EnumerateArray())
+                if (TryGetGraphQlError(doc.RootElement, out var errorMessage))
                 {
-                    if (!thread.TryGetProperty("isResolved", out var isResolvedProp)) continue;
-                    bool isResolved = isResolvedProp.GetBoolean();
+                    return ReviewThreadMutationResult.Failure(errorMessage);
+                }
 
-                    if (!thread.TryGetProperty("comments", out var comments)) continue;
-                    if (!comments.TryGetProperty("nodes", out var commentNodes)) continue;
+                if (!TryGetResolvedThread(doc.RootElement, out var resolvedThreadId, out var isResolved) ||
+                    !isResolved ||
+                    !string.Equals(resolvedThreadId, reviewThreadId, StringComparison.Ordinal))
+                {
+                    return ReviewThreadMutationResult.Failure("GitHub did not confirm that the review thread was resolved.");
+                }
 
-                    foreach (var comment in commentNodes.EnumerateArray())
+                return ReviewThreadMutationResult.Success();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return ReviewThreadMutationResult.Failure($"Resolving the review thread failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Queries the GitHub GraphQL API to get review-thread node IDs and resolved state.
+        /// Returns a dictionary keyed by the top-level review comment database ID.
+        /// </summary>
+        internal async Task<Dictionary<long, PullRequestReviewThread>> GetReviewThreadsAsync(
+            string owner, string repo, int prNumber, CancellationToken ct)
+        {
+            var result = new Dictionary<long, PullRequestReviewThread>();
+
+            if (!await EnsureCredentialsAsync(ct))
+                return result;
+
+            try
+            {
+                string? cursor = null;
+                bool hasNextPage;
+                do
+                {
+                    var query = "query($owner:String!,$repo:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){nodes{id isResolved comments(first:1){nodes{databaseId}}} pageInfo{hasNextPage endCursor}}}}}";
+                    using var response = await PostGraphQlAsync(query, new { owner, repo, number = prNumber, cursor }, ct);
+                    if (!response.IsSuccessStatusCode) return result;
+
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    if (TryGetGraphQlError(doc.RootElement, out _)) return result;
+                    if (!TryGetReviewThreadsNode(doc.RootElement, out var reviewThreads)) return result;
+                    if (!reviewThreads.TryGetProperty("nodes", out var nodes)) return result;
+
+                    foreach (var thread in nodes.EnumerateArray())
                     {
-                        if (comment.TryGetProperty("databaseId", out var dbIdProp) &&
-                            dbIdProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                        if (!thread.TryGetProperty("id", out var threadIdProp) ||
+                            threadIdProp.ValueKind != JsonValueKind.String)
                         {
-                            result[dbIdProp.GetInt64()] = isResolved;
+                            continue;
+                        }
+
+                        if (!thread.TryGetProperty("isResolved", out var isResolvedProp))
+                        {
+                            continue;
+                        }
+
+                        if (!thread.TryGetProperty("comments", out var comments) ||
+                            !comments.TryGetProperty("nodes", out var commentNodes))
+                        {
+                            continue;
+                        }
+
+                        foreach (var comment in commentNodes.EnumerateArray())
+                        {
+                            if (comment.TryGetProperty("databaseId", out var dbIdProp) &&
+                                dbIdProp.ValueKind == JsonValueKind.Number)
+                            {
+                                result[dbIdProp.GetInt64()] = new PullRequestReviewThread
+                                {
+                                    Id = threadIdProp.GetString() ?? string.Empty,
+                                    IsResolved = isResolvedProp.GetBoolean()
+                                };
+                            }
                         }
                     }
+
+                    hasNextPage = TryGetPageInfo(reviewThreads, out cursor);
                 }
+                while (hasNextPage);
             }
             catch { /* best-effort; fall back to all-unresolved */ }
 
             return result;
+        }
+
+        private async Task<HttpResponseMessage> PostGraphQlAsync(string query, object variables, CancellationToken ct)
+        {
+            var token = _cachedToken;
+            if (string.IsNullOrEmpty(token))
+            {
+                token = _client.Credentials?.Password;
+            }
+
+            var requestBody = JsonSerializer.Serialize(new
+            {
+                query,
+                variables
+            });
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.github.com/graphql");
+            request.Headers.UserAgent.ParseAdd("DiffinitelyPRHelper");
+            if (!string.IsNullOrEmpty(token))
+            {
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("token", token);
+            }
+
+            request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+            return await _graphQlHttpClient.SendAsync(request, ct);
+        }
+
+        private static bool TryGetGraphQlError(JsonElement root, out string message)
+        {
+            message = string.Empty;
+            if (!root.TryGetProperty("errors", out var errors) || errors.ValueKind != JsonValueKind.Array || errors.GetArrayLength() == 0)
+            {
+                return false;
+            }
+
+            var messages = new List<string>();
+            foreach (var error in errors.EnumerateArray())
+            {
+                if (error.TryGetProperty("message", out var errorMessage) && errorMessage.ValueKind == JsonValueKind.String)
+                {
+                    messages.Add(errorMessage.GetString() ?? string.Empty);
+                }
+            }
+
+            message = string.Join(" ", messages.Where(m => !string.IsNullOrWhiteSpace(m)));
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                message = "GitHub returned a GraphQL error.";
+            }
+
+            return true;
+        }
+
+        private static bool TryGetReviewThreadsNode(JsonElement root, out JsonElement reviewThreads)
+        {
+            reviewThreads = default;
+            if (!root.TryGetProperty("data", out var data)) return false;
+            if (!data.TryGetProperty("repository", out var repository)) return false;
+            if (!repository.TryGetProperty("pullRequest", out var pullRequest)) return false;
+            if (!pullRequest.TryGetProperty("reviewThreads", out reviewThreads)) return false;
+            return true;
+        }
+
+        private static bool TryGetPageInfo(JsonElement reviewThreads, out string? endCursor)
+        {
+            endCursor = null;
+            if (!reviewThreads.TryGetProperty("pageInfo", out var pageInfo))
+            {
+                return false;
+            }
+
+            if (pageInfo.TryGetProperty("endCursor", out var endCursorProp) &&
+                endCursorProp.ValueKind == JsonValueKind.String)
+            {
+                endCursor = endCursorProp.GetString();
+            }
+
+            return pageInfo.TryGetProperty("hasNextPage", out var hasNextPageProp) &&
+                   hasNextPageProp.ValueKind == JsonValueKind.True;
+        }
+
+        private static bool TryGetResolvedThread(JsonElement root, out string? threadId, out bool isResolved)
+        {
+            threadId = null;
+            isResolved = false;
+
+            if (!root.TryGetProperty("data", out var data)) return false;
+            if (!data.TryGetProperty("resolveReviewThread", out var resolveReviewThread)) return false;
+            if (!resolveReviewThread.TryGetProperty("thread", out var thread)) return false;
+
+            if (thread.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
+            {
+                threadId = idProp.GetString();
+            }
+
+            if (thread.TryGetProperty("isResolved", out var isResolvedProp) &&
+                (isResolvedProp.ValueKind == JsonValueKind.True || isResolvedProp.ValueKind == JsonValueKind.False))
+            {
+                isResolved = isResolvedProp.GetBoolean();
+            }
+
+            return !string.IsNullOrWhiteSpace(threadId);
         }
     }
 }

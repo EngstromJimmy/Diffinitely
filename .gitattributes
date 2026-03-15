@@ -1,4 +1,5 @@
 # Squad: union merge for append-only team state files
+.squad/** linguist-generated=true
 .squad/decisions.md merge=union
 .squad/agents/*/history.md merge=union
 .squad/log/** merge=union
