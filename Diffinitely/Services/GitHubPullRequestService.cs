@@ -41,46 +41,15 @@ namespace Diffinitely.Services
                 return true;
             }
 
-            // Try load from disk cache first
-            try
-            {
-                var cachePath = GetTokenCachePath();
-                if (File.Exists(cachePath))
-                {
-                    var tokenOnDisk = File.ReadAllText(cachePath).Trim();
-                    if (!string.IsNullOrEmpty(tokenOnDisk))
-                    {
-                        _cachedToken = tokenOnDisk;
-                        _client.Credentials = new Credentials(_cachedToken);
-                        return true;
-                    }
-                }
-            }
-            catch { }
-
             // Acquire via git credential fill
             var acquired = TryAcquireViaGitCredentialManager(out var token);
             if (acquired && !string.IsNullOrEmpty(token))
             {
                 _cachedToken = token;
                 _client.Credentials = new Credentials(token);
-                // Persist (best-effort)
-                try
-                {
-                    var path = GetTokenCachePath();
-                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                    File.WriteAllText(path, token);
-                }
-                catch { }
                 return true;
             }
             return false;
-        }
-
-        private string GetTokenCachePath()
-        {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Diffinitely");
-            return Path.Combine(dir, "github_token.cache");
         }
 
         private bool TryAcquireViaGitCredentialManager(out string token)
