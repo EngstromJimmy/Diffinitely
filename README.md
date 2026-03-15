@@ -70,8 +70,9 @@ Diffinitely/
 Diffinitely resolves your GitHub token in this order:
 
 1. In-memory cache (current session)
-2. Disk cache (`%APPDATA%\Diffinitely\github_token.cache`)
-3. Git Credential Manager (`git credential fill`)
+2. Git Credential Manager (`git credential fill`)
+
+The token is held in memory only and is never written to disk. On next launch, it will be re-acquired from Git Credential Manager (seamless if GCM already has the credential stored).
 
 If none of these are available, the GitHub API is used unauthenticated (lower rate limits).
 
