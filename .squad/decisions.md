@@ -2,6 +2,75 @@
 
 ## Active Decisions
 
+### Decision: VS Extensibility Remote UI Button Visual Feedback Pattern
+
+**Author:** Selina (Frontend Dev)  
+**Date:** 2026-04-10  
+**Related Work:** Button visual states fix  
+**Status:** Approved pattern for all future button work
+
+**Summary:** In `Microsoft.VisualStudio.Extensibility` Remote UI, button visual states (hover, pressed) MUST be implemented using `Style.Triggers`, not `ControlTemplate.Triggers`. The latter are silently ignored by the remote UI rendering engine.
+
+**The Problem:**
+Buttons in the tool window had no visual feedback:
+- No hover state (background color didn't change on mouse-over)
+- No pressed state (no visual indication when clicked)
+- No cursor change (didn't show hand cursor)
+- Poor affordance — users couldn't tell if elements were clickable
+
+**The Solution:**
+Replace `ControlTemplate`-based styles with `Style.Triggers` directly. Use VS-themed brushes:
+- **Default:** `Transparent` background, `VsBrushes.ToolWindowBorderKey` border
+- **Hover:** `VsBrushes.CommandBarHoverKey` background
+- **Pressed:** `VsBrushes.CommandBarSelectedKey` background
+- **Disabled:** `VsBrushes.GrayTextKey` foreground with 0.5 opacity
+
+**Why This Works:**
+- `Style.Triggers` are evaluated by the Remote UI host and propagate to rendered controls
+- `ControlTemplate.Triggers` are NOT evaluated — they exist in XAML but have no runtime effect
+- VS-themed brushes dynamically adapt to light/dark themes
+- `Cursor="Hand"` provides immediate affordance
+
+**Files Changed:** `PRReviewRemoteUserControl.xaml`
+
+**Testing:** All 38 tests pass; build succeeded; visual inspection confirms hover, pressed, and disabled states render correctly.
+
+**Governance:** This pattern is the standard for all button styles in VS Extensibility Remote UI XAML. If you need custom button visuals, fork `FlatListButtonStyle` and modify the trigger setters — never use `ControlTemplate.Triggers`.
+
+---
+
+### Decision: View on GitHub Link Implementation
+
+**Author:** Lucius (Backend Dev)  
+**Date:** 2026-04-10  
+**Status:** Complete
+
+**Summary:** Added a clickable "View on GitHub" link at the top of the PR review tool window that opens the current pull request on GitHub.com in the user's default browser.
+
+**What Changed:**
+1. **Data model:** `PullRequestInfo.HtmlUrl` captures GitHub web URL from Octokit `PullRequest.HtmlUrl`
+2. **Command:** `OpenInBrowserCommand` — minimal IAsyncCommand that opens URL with `Process.Start`
+3. **ViewModel:** `PRReviewViewModel.PrHtmlUrl` property + `OpenInBrowserCommand` wired when PR loaded
+4. **UI:** New Row 0 with hyperlink-styled button (underline, blue, emoji 🔗)
+5. **Converter:** `StringEmptyToCollapsedConverter` hides link when no PR loaded
+
+**Why This Approach:**
+- VS Extensibility Remote UI does not reliably support WPF `Hyperlink` navigation. A button styled as link is recommended.
+- Follows existing command architecture (`ResolveCommand`, `UnresolveCommand`, etc.)
+- Dynamic command creation prevents dead clicks
+- Browser launch failures are silent — convenience feature, not critical path
+
+**Risks Covered:**
+- No PR loaded: Link hidden via visibility binding
+- Empty URL: CanExecute gate prevents execution
+- Browser launch failure: Caught silently
+
+**Files Modified:** `PullRequestInfo.cs`, `GitHubPullRequestService.cs`, `OpenInBrowserCommand.cs` (new), `PRReviewViewModel.cs`, `StringEmptyToCollapsedConverter.cs` (new), `PRReviewRemoteUserControl.xaml`
+
+**Testing:** Build succeeded; all 38 tests passed.
+
+---
+
 ### Decision: Unresolve/Re-open Review Thread Feature Complete
 
 **Author:** Team (Lucius, Selina, Renee)  
