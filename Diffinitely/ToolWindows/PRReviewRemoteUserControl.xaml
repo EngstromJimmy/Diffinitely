@@ -14,6 +14,8 @@
             <RowDefinition Height="Auto"/>
             <!-- main content row (tabs) -->
             <RowDefinition Height="*"/>
+            <!-- status bar row -->
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid.Resources>
@@ -99,6 +101,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="1,1,1,0"
+                        CornerRadius="3,3,0,0"
                         Padding="{TemplateBinding Padding}">
                                 <ContentPresenter
                         x:Name="ContentSite"
@@ -203,7 +206,6 @@
             <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
                 <ProgressBar Width="120" Height="14" IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
                 <TextBlock Margin="8,0,0,0" Text="{Binding LoadingText}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
-                <TextBlock Margin="8,0,0,0" Text="{Binding Status}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToCollapsedWhenTrueConverter}}" />
             </StackPanel>
         </DockPanel>
 
@@ -534,6 +536,20 @@
                 </Grid>
             </TabItem>
         </TabControl>
+
+        <!-- ===================== -->
+        <!-- STATUS BAR (ROW 2) -->
+        <!-- ===================== -->
+        <Border Grid.Row="2"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                Padding="4,2"
+                Visibility="{Binding Status, Converter={StaticResource StringEmptyToCollapsedConverter}}">
+            <TextBlock Text="{Binding Status}"
+                       FontSize="11"
+                       Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+        </Border>
     </Grid>
 </DataTemplate>
 
