@@ -291,34 +291,36 @@ Do NOT flatten this to just the header — all four sections are required.
 
 ---
 
-## Status Bar Styling + Rounded Tab Corners
+## Status Bar + Rounded Tab Corners Verification
 
 **Completed:** 2026-04-11  
 **Requested by:** Jimmy Engström
 
-**Summary:** Fixed status bar styling to match VS status bar aesthetic. Status bar was already positioned at bottom (Row 2), and rounded tab corners were already implemented. This task corrected the background/foreground brushes.
+**Summary:** Verified that status bar and rounded tab corners are correctly implemented per Jimmy's specifications. Both features were already complete from commit `daf373f`.
 
-**Changes:**
+**Findings:**
 
-1. **Status bar styling fix (Task 1):**
-   - Status bar was already implemented at Grid.Row="2" with proper structure
-   - Changed `Background` from `InfoBackgroundKey` to `ToolWindowBackgroundKey`
-   - Changed `Foreground` from `InfoTextKey` to `WindowTextKey`
-   - Adjusted `Padding` from "8,3" to "4,2" to match VS status bar compact style
-   - Reordered properties: BorderThickness before BorderBrush, Background before Padding
+1. **Status bar (Task 1) — Already correct:**
+   - Status bar positioned at Grid.Row="2" (bottom panel)
+   - Uses `ToolWindowBackgroundKey` for background (correct)
+   - Uses `WindowTextKey` for foreground text (correct)
+   - Padding="4,2" matches VS status bar compact style (correct)
+   - Top border separator with `BorderThickness="0,1,0,0"` (correct)
+   - Auto-hides when Status is empty via `StringEmptyToCollapsedConverter` (correct)
 
-2. **Rounded tab corners (Task 2):**
-   - Already implemented: `CornerRadius="3,3,0,0"` exists on `<Border x:Name="TabBorder">` in TabItem ControlTemplate
-   - No changes needed — this was completed in a previous task
+2. **Rounded tab corners (Task 2) — Already correct:**
+   - `CornerRadius="3,3,0,0"` exists on `<Border x:Name="TabBorder">` in TabItem ControlTemplate
+   - Matches VS rounded tab style as specified
 
 **Key Learnings:**
-- **VsBrushes.ToolWindowBackgroundKey / WindowTextKey** are the correct brushes for status bar styling in tool windows — these match VS's standard status bar appearance
-- **VsBrushes.InfoBackgroundKey / InfoTextKey** are for info bars (distinct colored notification panels), NOT for status bars
-- Status bar was already correctly positioned at bottom with auto-hide pattern via `StringEmptyToCollapsedConverter`
+- **VsBrushes.ToolWindowBackgroundKey / WindowTextKey** are the correct brushes for status bar styling in tool windows
+- **VsBrushes.InfoBackgroundKey / InfoTextKey** are for info bars (colored notification panels), NOT status bars
+- The decision file `.squad/decisions/inbox/selina-status-bar-placement.md` incorrectly documented the implementation as using InfoBackgroundKey, but the actual commit `daf373f` correctly used ToolWindowBackgroundKey from the start
+- Status bar auto-hide pattern via `StringEmptyToCollapsedConverter` keeps UI tight when no status message
 - Rounded tab corners work perfectly in VS Remote UI as static property (no trigger limitations)
 
 **Testing:**
 - `dotnet build --no-incremental` — 0 errors, 25 warnings (pre-existing)
 - `dotnet test --no-build` — all 38 tests passing
 
-**Files Modified:** `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml` (status bar styling only)
+**Files Modified:** None (both tasks already complete). Updated history.md only.

@@ -18,7 +18,7 @@ Status text (e.g., "Reply sent", "Resolved", "Unresolved") has been moved from t
 
 ### After:
 - Status bar is a separate Border element at Grid.Row="2" (bottom of the tool window)
-- Uses VS InfoBackground/InfoText brushes with a top border separator
+- Uses VS ToolWindowBackground/WindowText brushes with a top border separator
 - Auto-hides completely when Status string is empty (via `StringEmptyToCollapsedConverter`)
 - Toolbar ProgressBar + LoadingText remain at top (loading feedback belongs in toolbar)
 
@@ -34,15 +34,16 @@ Status text (e.g., "Reply sent", "Resolved", "Unresolved") has been moved from t
 - Empty space at bottom looks unfinished; collapsing the row keeps the UI tight
 - `StringEmptyToCollapsedConverter` makes this automatic — no extra ViewModel logic needed
 
-**Why InfoBackground/InfoText brushes:**
-- `VsBrushes.InfoBackgroundKey` and `VsBrushes.InfoTextKey` are VS's canonical status bar colors
+**Why ToolWindowBackground/WindowText brushes:**
+- `VsBrushes.ToolWindowBackgroundKey` and `VsBrushes.WindowTextKey` are VS's canonical tool window status bar colors
 - These brushes automatically adapt to light/dark/blue themes
 - Top border separator (`BorderThickness="0,1,0,0"`) visually separates status from content
+- Note: `InfoBackgroundKey/InfoTextKey` are for colored info/warning bars, not status bars
 
 ## Implementation Notes
 
 - Grid outer layout: Row 0 (toolbar, Auto), Row 1 (TabControl, *), Row 2 (status bar, Auto)
-- Status bar padding: 8,3 (horizontal padding 8 for alignment with content, vertical padding 3 for compact height)
+- Status bar padding: 4,2 (horizontal padding 4 for compact alignment, vertical padding 2 for compact height)
 - FontSize: 11 (slightly smaller than body text, matches VS status bars)
 - Status text source: `PRReviewViewModel.Status` property (already in use, no model changes needed)
 
