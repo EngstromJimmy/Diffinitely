@@ -88,7 +88,7 @@
 
             <Style TargetType="TabItem">
                 <Setter Property="Foreground"
-            Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+            Value="{DynamicResource {x:Static styles:VsBrushes.GrayTextKey}}"/>
                 <Setter Property="Background"
             Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
                 <Setter Property="BorderBrush"
@@ -118,9 +118,11 @@
                                 <!-- Selected tab -->
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter TargetName="TabBorder" Property="Background"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                                Value="{DynamicResource {x:Static styles:VsBrushes.WindowKey}}"/>
                                     <Setter TargetName="TabBorder" Property="BorderBrush"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                Value="{DynamicResource {x:Static styles:VsBrushes.AccentBorderKey}}"/>
+                                    <Setter TargetName="TabBorder" Property="BorderThickness"
+                                Value="1,2,1,0"/>
                                     <Setter Property="Foreground"
                                 Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
                                 </Trigger>
@@ -128,7 +130,7 @@
                                 <!-- Hover tab -->
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="TabBorder" Property="Background"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonHoverActiveKey}}"/>
                                     <Setter TargetName="TabBorder" Property="BorderBrush"
                                 Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
                                     <Setter Property="Foreground"
