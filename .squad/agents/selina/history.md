@@ -218,6 +218,23 @@ Only one button visible at a time:
 
 ---
 
+## Comment Item DataTemplate Binding Paths
+
+**Completed:** 2026-04-11
+**Requested by:** Jimmy Engström
+
+**Binding paths for comment item DataTemplate (`PRReviewRemoteUserControl.xaml`, `ListView.ItemTemplate`):**
+
+- **Avatar image URL:** `{Binding AuthorAvatarUrl}` → `PrCommentItem.AuthorAvatarUrl` (string)
+- **Author name:** `{Binding Author}` → `PrCommentItem.Author` (string) — use `TextBlock Text="{Binding Author}"`, NOT `<Run Text="{Binding Author}"/>` (Run bindings show VS type garbage in Remote UI)
+- **File name:** `{Binding FilePath}` → `PrCommentItem.FilePath` (string)
+
+**Fix applied:**
+- Replaced `<Run Text="{Binding Author}"/>` with `<TextBlock Text="{Binding Author}"/>` to avoid Remote UI object `.ToString()` rendering VS type strings.
+- Replaced old 5-row Grid (file row, author row, body row, actions row, reply row) with a compact 2-column Grid: `Auto` (40×40 avatar) + `*` (stacked FilePath + Author).
+
+---
+
 ## Button Hover Color Fix (ThemedDialogButtonStyleKey Base)
 
 **Completed:** 2026-04-10  
