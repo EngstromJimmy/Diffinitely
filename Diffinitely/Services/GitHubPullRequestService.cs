@@ -124,7 +124,7 @@ namespace Diffinitely.Services
                 changed.Add(new ChangedFileInfo { CommentCount = numberOfComments, FullPath = $"{repoRoot}\\{f.FileName}", Path = f.FileName, PreviousPath = f.PreviousFileName, Kind = kind });
             }
             var reviewThreads = await GetReviewThreadsAsync(owner, repo, pr.Number, ct);
-            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot, ReviewThreads = reviewThreads };
+            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, HtmlUrl = pr.HtmlUrl, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot, ReviewThreads = reviewThreads };
         }
 
         public async Task<string?> GetFileContentAsync(string owner, string repo, string path, string sha, CancellationToken ct)

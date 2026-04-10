@@ -161,3 +161,61 @@
 - `Diffinitely/ToolWindows/CommentThreadBuilder.cs` (thread builder)
 - `Diffinitely/ToolWindows/PRReviewViewModel.cs` (ViewModel wiring)
 - `Diffinitely.Tests/CommentThreadBuilderTests.cs` (test coverage)
+
+---
+
+## View on GitHub Link Implementation
+
+**Completed:** 2025-01-24  
+**Requested by:** Jimmy Engström
+
+**Summary:** Added a "View on GitHub" link at the top of the PR review tool window that opens the current PR on GitHub.com in the default browser.
+
+**Changes:**
+
+1. **`PullRequestInfo` (Models/PullRequestInfo.cs):**
+   - Added `HtmlUrl` property to store the GitHub web URL for the PR
+
+2. **`GitHubPullRequestService` (Services/GitHubPullRequestService.cs):**
+   - Updated `GetCurrentBranchPullRequestAsync` to populate `HtmlUrl` from Octokit `PullRequest.HtmlUrl`
+
+3. **`OpenInBrowserCommand` (Commands/OpenInBrowserCommand.cs):**
+   - New command class implementing `IAsyncCommand`
+   - Opens URL using `Process.Start` with `UseShellExecute = true`
+   - Gated by `CanExecute` to ensure URL is non-empty
+   - Silent failure handling (opening browser is best-effort)
+
+4. **`PRReviewViewModel` (ToolWindows/PRReviewViewModel.cs):**
+   - Added `PrHtmlUrl` property (with `[DataMember]` for Remote UI)
+   - Added `OpenInBrowserCommand` property dynamically created when URL is set
+   - URL populated when PR is loaded; cleared when no PR exists
+
+5. **`StringEmptyToCollapsedConverter` (ToolWindows/StringEmptyToCollapsedConverter.cs):**
+   - New WPF converter to hide link when URL is empty or null
+   - Returns `Visibility.Collapsed` for empty/null strings, `Visibility.Visible` otherwise
+
+6. **`PRReviewRemoteUserControl.xaml` (ToolWindows/PRReviewRemoteUserControl.xaml):**
+   - Added new Row 0 for GitHub link (above existing toolbar)
+   - Link styled as button with underline and GitHub blue color (#FF0969DA)
+   - Uses emoji 🔗 prefix for visual clarity
+   - Visibility bound to `PrHtmlUrl` via `StringEmptyToCollapsedConverter`
+   - Command bound to `OpenInBrowserCommand`
+   - Tooltip: "Open this pull request on GitHub.com"
+
+**Patterns used:**
+- Followed existing command pattern (ResolveCommand, UnresolveCommand)
+- Used Remote UI-compatible button for link (not WPF Hyperlink which requires navigation handlers)
+- Property notification via `INotifyPropertyChanged`
+- `[DataMember]` on all ViewModel properties for VS extensibility Remote UI
+- Visibility controlled via binding and converter (not code-behind)
+
+**Build validation:** All 38 tests passed; build succeeded with no errors.
+
+**Key file paths:**
+- `Diffinitely/Models/PullRequestInfo.cs` (data model)
+- `Diffinitely/Services/GitHubPullRequestService.cs` (service layer)
+- `Diffinitely/Commands/OpenInBrowserCommand.cs` (command implementation)
+- `Diffinitely/ToolWindows/PRReviewViewModel.cs` (ViewModel wiring)
+- `Diffinitely/ToolWindows/StringEmptyToCollapsedConverter.cs` (converter)
+- `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml` (UI)
+

@@ -7,6 +7,7 @@ namespace Diffinitely.Models
 
         public string Id { get; set; }
         public string Title { get; set; }
+        public string HtmlUrl { get; set; }
         public IReadOnlyList<ChangedFileInfo> ChangedFiles { get; set; }
         public string Owner { get; set; }
         public string Repository { get; set; }

@@ -49,6 +49,7 @@
 - **Comments-tab action affordances:** In `PRReviewRemoteUserControl.xaml`, comment-row actions are rendered directly from per-item command properties on `PrCommentItem`. If an action button binds to a nullable command, the view must also reflect capability state (hide or disable it) or the UI will advertise a no-op.
 - **True review-thread rendering (Issue #10):** In the comments pane, nested replies need to be attached by walking `InReplyToId` back to the true top-level comment. Grouping separate top-level comments by `FilePath + Line` is unsafe because it invents threads GitHub does not actually have.
 - **Re-open button (Unresolve UI):** The Re-open button mirrors the Resolve button with opposite visibility logic. `CanUnresolve` is set in `CommentThreadBuilder.cs` when `threadState.IsResolved == true` and valid `ReviewThreadId` exists. The button binds to `UnresolveCommand` and uses `BooleanToVisibleWhenTrueConverter` on `CanUnresolve`. XAML: `PRReviewRemoteUserControl.xaml` line 437-439. Model: `PrCommentItem.cs` added `CanUnresolve` property. Builder: `CommentThreadBuilder.cs` line 86-89 sets `CanUnresolve`.
+- **VS Extensibility Remote UI button triggers:** In `Microsoft.VisualStudio.Extensibility` Remote UI, `ControlTemplate.Triggers` are silently ignored. For interactive visual feedback (hover, pressed states), ALWAYS use `Style.Triggers` directly on the button style. Use VS-themed brushes like `VsBrushes.CommandBarHoverKey` and `VsBrushes.CommandBarSelectedKey`. Always set `Cursor="Hand"` for affordance.
 
 ---
 
@@ -119,4 +120,53 @@ Only one button visible at a time:
 - Post-action reload preserves current filters
 
 **Orchestration:** Completed in parallel with Lucius (backend) and Renee (tests). All 23 tests passing.
+
+---
+
+## Button Visual States Fix
+
+**Completed:** 2026-04-10  
+**Requested by:** Jimmy Engström
+
+**Summary:** Fixed all buttons in the VS extension tool window to provide proper visual feedback (hover, pressed, and disabled states). Previously, buttons were completely unresponsive visually — no hover state, no pressed state, no cursor change.
+
+**Problem:** The extension uses Microsoft.VisualStudio.Extensibility Remote UI model. Standard WPF `ControlTemplate.Triggers` do not work in this environment — you must use `Style.Triggers` directly on the style.
+
+**Solution:**
+
+1. **Replaced `FlatListButtonStyle` in `PRReviewRemoteUserControl.xaml`:**
+   - Removed custom `ControlTemplate` that had no triggers
+   - Added `Style.Triggers` with `IsMouseOver`, `IsPressed`, and `IsEnabled` triggers
+   - Used VS-themed brushes: `VsBrushes.CommandBarHoverKey` for hover, `VsBrushes.CommandBarSelectedKey` for pressed
+   - Added `Cursor="Hand"` for proper affordance
+   - Added subtle border (`BorderThickness="1"`) to make buttons clearly identifiable
+
+2. **Added `TextBox` style with focus indicator:**
+   - Used `IsFocused` trigger to change border color to `VsBrushes.AccentBorderKey`
+   - Increased border thickness on focus from 1 to 2 for clear visual feedback
+
+**Result:**
+- All buttons now show hover state (background color change)
+- All buttons show pressed state (different background)
+- All buttons show hand cursor on hover
+- TextBox (reply input) shows accent border when focused
+- All 38 tests still pass
+- Build succeeded with no errors
+
+**Pattern for VS Extensibility Remote UI buttons:**
+```xaml
+<Style x:Key="FlatListButtonStyle" TargetType="Button">
+    <Setter Property="Cursor" Value="Hand"/>
+    <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+            <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarHoverKey}}"/>
+        </Trigger>
+        <Trigger Property="IsPressed" Value="True">
+            <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarSelectedKey}}"/>
+        </Trigger>
+    </Style.Triggers>
+</Style>
+```
+
+**Key Learning:** In VS Extensibility Remote UI, NEVER use `ControlTemplate.Triggers` — they are silently ignored. Always use `Style.Triggers` for interactive visual feedback.
 

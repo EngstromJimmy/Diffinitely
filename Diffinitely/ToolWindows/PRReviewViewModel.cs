@@ -21,9 +21,13 @@ internal class PRReviewViewModel : INotifyPropertyChanged
     private string _status = string.Empty;
     private string? _selectedAuthor;
     private string? _selectedResolutionFilter = "<All>";
+    private string _prHtmlUrl = string.Empty;
 
     [DataMember]
     public IAsyncCommand RefreshCommand { get; }
+
+    [DataMember]
+    public IAsyncCommand? OpenInBrowserCommand { get; private set; }
 
     [DataMember]
     public ObservableCollection<string> AllAuthors { get; } = new();
@@ -115,6 +119,24 @@ internal class PRReviewViewModel : INotifyPropertyChanged
         }
     }
 
+    [DataMember]
+    public string PrHtmlUrl
+    {
+        get => _prHtmlUrl;
+        set
+        {
+            if (_prHtmlUrl != value)
+            {
+                _prHtmlUrl = value;
+                RaisePropertyChanged(nameof(PrHtmlUrl));
+                OpenInBrowserCommand = string.IsNullOrWhiteSpace(value) 
+                    ? null 
+                    : new OpenInBrowserCommand(value);
+                RaisePropertyChanged(nameof(OpenInBrowserCommand));
+            }
+        }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public PRReviewViewModel(
@@ -170,9 +192,12 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             if (pr == null)
             {
                 Roots.Clear();
+                PrHtmlUrl = string.Empty;
                 LoadingText = "No pull request for current branch.";
                 return;
             }
+
+            PrHtmlUrl = pr.HtmlUrl ?? string.Empty;
 
             LoadingText = "Loading changed files...";
             var built = BuildTreeFromPaths(pr.ChangedFiles, pr);

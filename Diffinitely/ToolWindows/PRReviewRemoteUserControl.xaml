@@ -10,6 +10,8 @@
         Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
 
         <Grid.RowDefinitions>
+            <!-- GitHub link row -->
+            <RowDefinition Height="Auto"/>
             <!-- toolbar row (Refresh etc) -->
             <RowDefinition Height="Auto"/>
             <!-- main content row (tabs) -->
@@ -22,6 +24,7 @@
             <local:ZeroToCollapsedConverter x:Key="ZeroToCollapsedConverter" />
             <local:BooleanToCollapsedWhenTrueConverter x:Key="BooleanToCollapsedWhenTrueConverter" />
             <local:BooleanToVisibleWhenTrueConverter   x:Key="BooleanToVisibleWhenTrueConverter" />
+            <local:StringEmptyToCollapsedConverter x:Key="StringEmptyToCollapsedConverter" />
 
             <!-- VS themed base styles for TreeView / TreeViewItem -->
             <Style TargetType="TreeView"
@@ -35,29 +38,31 @@
                         Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
             </Style>
 
-            <!-- Flat clickable button style -->
+            <!-- Flat clickable button style with hover/pressed feedback -->
             <Style x:Key="FlatListButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderBrush" Value="Transparent"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="0"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="4,2"/>
                 <Setter Property="HorizontalAlignment" Value="Left"/>
-                <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bg"
-                                    Background="Transparent">
-                                <ContentPresenter
-                                    Margin="{TemplateBinding Padding}"
-                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                            </Border>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarHoverKey}}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarBorderKey}}"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarSelectedKey}}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarBorderKey}}"/>
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.GrayTextKey}}"/>
+                        <Setter Property="Opacity" Value="0.5"/>
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
             <!-- Tab theming -->
@@ -136,13 +141,51 @@
                    BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogComboBoxStyleKey}}">
             </Style>
 
+            <!-- TextBox theming with focus border -->
+            <Style TargetType="TextBox">
+                <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.WindowKey}}"/>
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Style.Triggers>
+                    <Trigger Property="IsFocused" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.AccentBorderKey}}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
         </Grid.Resources>
 
         <!-- ===================== -->
-        <!-- GLOBAL TOOLBAR (ROW 0) -->
+        <!-- VIEW ON GITHUB LINK (ROW 0) -->
+        <!-- ===================== -->
+        <Button
+            Grid.Row="0"
+            Style="{StaticResource FlatListButtonStyle}"
+            Command="{Binding OpenInBrowserCommand}"
+            HorizontalAlignment="Left"
+            Margin="0,0,0,4"
+            Padding="0"
+            ToolTip="Open this pull request on GitHub.com">
+            <Button.Visibility>
+                <Binding Path="PrHtmlUrl">
+                    <Binding.Converter>
+                        <local:StringEmptyToCollapsedConverter />
+                    </Binding.Converter>
+                </Binding>
+            </Button.Visibility>
+            <TextBlock
+                Foreground="#FF0969DA"
+                TextDecorations="Underline"
+                Text="🔗 View on GitHub" />
+        </Button>
+
+        <!-- ===================== -->
+        <!-- GLOBAL TOOLBAR (ROW 1) -->
         <!-- ===================== -->
         <DockPanel
-            Grid.Row="0"
+            Grid.Row="1"
             LastChildFill="False"
             Margin="0,0,0,4"
             Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
@@ -170,10 +213,10 @@
         </DockPanel>
 
         <!-- ===================== -->
-        <!-- MAIN CONTENT (ROW 1) -->
+        <!-- MAIN CONTENT (ROW 2) -->
         <!-- ===================== -->
         <TabControl
-            Grid.Row="1"
+            Grid.Row="2"
             Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
             BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
             BorderThickness="1">
