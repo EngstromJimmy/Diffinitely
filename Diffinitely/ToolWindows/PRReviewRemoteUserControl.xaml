@@ -452,7 +452,7 @@
                                                     Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}">
                                                     <Run Text="{Binding Author}" />
                                                     <Run Text=" - " />
-                                                    <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
+                                                    <Run Text="{Binding FormattedCreatedAt}" />
                                                 </TextBlock>
                                             </StackPanel>
                                         </Grid>
@@ -470,7 +470,7 @@
                                                                 <TextBlock FontSize="10">
                                                                     <Run Text="{Binding Author}" />
                                                                     <Run Text=" - " />
-                                                                    <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
+                                                                    <Run Text="{Binding FormattedCreatedAt}" />
                                                                 </TextBlock>
                                                                 <TextBlock Text="{Binding Body}" TextWrapping="Wrap" FontSize="11" />
                                                             </StackPanel>
