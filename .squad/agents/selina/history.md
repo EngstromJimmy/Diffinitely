@@ -324,3 +324,47 @@ Do NOT flatten this to just the header — all four sections are required.
 - `dotnet test --no-build` — all 38 tests passing
 
 **Files Modified:** None (both tasks already complete). Updated history.md only.
+
+---
+
+## Active Tab Visual Distinction (VS-style)
+
+**Completed:** 2026-04-11  
+**Requested by:** Jimmy Engström
+
+**Summary:** Made the active tab visually distinct from inactive tabs using Visual Studio's own tab styling pattern. Previously, both selected and unselected tabs used the same `ToolWindowBackgroundKey` background and border colors, making it impossible to tell which tab was active.
+
+**Changes:**
+
+1. **Inactive tab default foreground (line 91):**
+   - Changed base `Foreground` setter from `VsBrushes.WindowTextKey` to `VsBrushes.GrayTextKey`
+   - Makes unselected tab labels slightly dimmer so active tab text pops more
+
+2. **Selected tab trigger (lines 118-127):**
+   - Background: `VsBrushes.WindowKey` — lighter content area background (editor background) makes selected tab pop from the tab strip
+   - BorderBrush: `VsBrushes.AccentBorderKey` — VS accent color (blue in most themes) creates distinct top accent bar
+   - BorderThickness: `"1,2,1,0"` — 2px top border makes the accent visible
+   - Foreground: `VsBrushes.WindowTextKey` — full-brightness text contrasts with dimmed inactive tabs
+
+3. **Hover tab trigger (lines 129-136):**
+   - Background: `VsBrushes.ToolWindowButtonHoverActiveKey` — slight hover feedback without making it look like the active tab
+   - Foreground: `VsBrushes.WindowTextKey` — full brightness on hover for feedback
+
+**VS Brush Keys That Worked:**
+- `VsBrushes.WindowKey` — lighter background for selected tab (perfect for making it pop)
+- `VsBrushes.AccentBorderKey` — accent color for 2px top border (VS theme blue/accent)
+- `VsBrushes.GrayTextKey` — dimmed foreground for inactive tab labels
+- `VsBrushes.ToolWindowButtonHoverActiveKey` — subtle hover background
+
+**Key Learning:** ControlTemplate.Triggers work for TabItem in VS Remote UI (unlike Button, which requires Style.Triggers). The TabItem ControlTemplate triggers successfully apply background, border, and foreground changes for IsSelected and IsMouseOver states.
+
+**Pattern:**
+- **Active tab:** Lighter background + accent top border + full-brightness text
+- **Inactive tabs:** Default background + dimmed text
+- **Hover:** Subtle background change + full-brightness text
+
+**Files Modified:** `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml`
+
+**Testing:**
+- `dotnet build --no-incremental -verbosity:minimal` — 0 errors, 25 warnings (pre-existing)
+- `dotnet test --no-build -verbosity:minimal` — all 38 tests passing
