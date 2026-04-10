@@ -26,6 +26,7 @@ public class PrCommentItem : INotifyPropertyChanged
     [DataMember]
     public DateTimeOffset CreatedAt { get; set; }
 
+    [DataMember]
     public string FormattedCreatedAt => CreatedAt.ToString("yyyy-MM-dd HH:mm");
 
     [DataMember]
@@ -89,6 +90,6 @@ public class PrCommentReply
 {
     [DataMember] public string Author { get; set; } = "";
     [DataMember] public DateTimeOffset CreatedAt { get; set; }
-    public string FormattedCreatedAt => CreatedAt.ToString("yyyy-MM-dd HH:mm");
+    [DataMember] public string FormattedCreatedAt => CreatedAt.ToString("yyyy-MM-dd HH:mm");
     [DataMember] public string Body { get; set; } = "";
 }
