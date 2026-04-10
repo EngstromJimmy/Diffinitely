@@ -277,3 +277,13 @@ Only one button visible at a time:
 **Files Modified:** Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml
 
 ---
+
+## 2026-04-11: Comment DataTemplate full structure
+
+The comment DataTemplate in the ListView (Comments tab) has four logical sections that must ALL be preserved when restructuring:
+- **Row 0 header**: 2-column Grid — 40x40 avatar (left) + StackPanel with FilePath (bold), Outdated badge, and Author+timestamp (right)
+- **Row 1 body**: StackPanel with Body TextBlock (TextWrapping=Wrap) + ThreadReplies ItemsControl (nested DataTemplate shows Author, CreatedAt, Body)
+- **Row 2 actions**: DockPanel with Resolve button (ResolveCommand/CanResolve), Re-open button (UnresolveCommand/CanUnresolve), Jump to Diff button (JumpToDiffCommand/CanJumpToDiff) — all use TreeItemButtonStyle
+- **Row 3 reply**: DockPanel (visible via CanReply) with Reply button (ReplyCommand) docked right, and TextBox bound to ReplyText (TwoWay)
+
+Do NOT flatten this to just the header — all four sections are required.
