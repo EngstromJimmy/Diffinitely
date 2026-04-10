@@ -288,3 +288,37 @@ The comment DataTemplate in the ListView (Comments tab) has four logical section
 - **Row 3 reply**: DockPanel (visible via CanReply) with Reply button (ReplyCommand) docked right, and TextBox bound to ReplyText (TwoWay)
 
 Do NOT flatten this to just the header — all four sections are required.
+
+---
+
+## Status Bar Styling + Rounded Tab Corners
+
+**Completed:** 2026-04-11  
+**Requested by:** Jimmy Engström
+
+**Summary:** Fixed status bar styling to match VS status bar aesthetic. Status bar was already positioned at bottom (Row 2), and rounded tab corners were already implemented. This task corrected the background/foreground brushes.
+
+**Changes:**
+
+1. **Status bar styling fix (Task 1):**
+   - Status bar was already implemented at Grid.Row="2" with proper structure
+   - Changed `Background` from `InfoBackgroundKey` to `ToolWindowBackgroundKey`
+   - Changed `Foreground` from `InfoTextKey` to `WindowTextKey`
+   - Adjusted `Padding` from "8,3" to "4,2" to match VS status bar compact style
+   - Reordered properties: BorderThickness before BorderBrush, Background before Padding
+
+2. **Rounded tab corners (Task 2):**
+   - Already implemented: `CornerRadius="3,3,0,0"` exists on `<Border x:Name="TabBorder">` in TabItem ControlTemplate
+   - No changes needed — this was completed in a previous task
+
+**Key Learnings:**
+- **VsBrushes.ToolWindowBackgroundKey / WindowTextKey** are the correct brushes for status bar styling in tool windows — these match VS's standard status bar appearance
+- **VsBrushes.InfoBackgroundKey / InfoTextKey** are for info bars (distinct colored notification panels), NOT for status bars
+- Status bar was already correctly positioned at bottom with auto-hide pattern via `StringEmptyToCollapsedConverter`
+- Rounded tab corners work perfectly in VS Remote UI as static property (no trigger limitations)
+
+**Testing:**
+- `dotnet build --no-incremental` — 0 errors, 25 warnings (pre-existing)
+- `dotnet test --no-build` — all 38 tests passing
+
+**Files Modified:** `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml` (status bar styling only)
