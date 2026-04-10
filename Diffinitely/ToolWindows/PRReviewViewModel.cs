@@ -203,7 +203,10 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                     comment.InReplyToId)),
                 pr.ReviewThreads.ToDictionary(
                     entry => entry.Key,
-                    entry => new CommentThreadBuilder.ReviewThreadState(entry.Value.Id, entry.Value.IsResolved)),
+                    entry => new CommentThreadBuilder.ReviewThreadState(
+                        entry.Value.Id,
+                        entry.Value.IsResolved,
+                        entry.Value.IsOutdated)),
                 comment => string.IsNullOrWhiteSpace(comment.FilePath)
                     ? null
                     : new OpenForReviewCommand(_visualStudioExtensibility, $"{pr.RepoRoot}\\{comment.FilePath}"),
@@ -236,6 +239,25 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                         item,
                         ReloadTreeInternalAsync,
                         message => Status = message);
+                },
+                (item, _, threadState) =>
+                {
+                    if (string.IsNullOrWhiteSpace(threadState?.ReviewThreadId))
+                        return null;
+
+                    return new ReplyCommand(
+                        _prService,
+                        item,
+                        ReloadTreeInternalAsync,
+                        message => Status = message);
+                },
+                (item, comment, _) =>
+                {
+                    if (string.IsNullOrWhiteSpace(comment.FilePath))
+                        return null;
+
+                    var fileInfo = pr.ChangedFiles.FirstOrDefault(f => f.Path == comment.FilePath);
+                    return fileInfo is null ? null : new OpenDiffCommand(fileInfo, pr, _repoService);
                 });
 
             foreach (var item in commentItems)

@@ -236,6 +236,55 @@ namespace Diffinitely.Services
             }
         }
 
+        internal virtual async Task<ReviewThreadMutationResult> AddReviewThreadReplyAsync(
+            string reviewThreadId, string body, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(reviewThreadId))
+                return ReviewThreadMutationResult.Failure("The review thread is missing its GitHub thread ID.");
+
+            if (string.IsNullOrWhiteSpace(body))
+                return ReviewThreadMutationResult.Failure("Reply body cannot be empty.");
+
+            if (!await EnsureCredentialsAsync(ct))
+                return ReviewThreadMutationResult.Failure("GitHub authentication is unavailable, so the reply could not be sent.");
+
+            var query = "mutation($threadId:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$threadId,body:$body}){comment{id}}}";
+
+            try
+            {
+                using var response = await PostGraphQlAsync(query, new { threadId = reviewThreadId, body }, ct);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return ReviewThreadMutationResult.Failure(
+                        $"GitHub returned {(int)response.StatusCode} ({response.ReasonPhrase}) while sending the reply.");
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+
+                if (TryGetGraphQlError(doc.RootElement, out var errorMessage))
+                    return ReviewThreadMutationResult.Failure(errorMessage);
+
+                if (!doc.RootElement.TryGetProperty("data", out var data) ||
+                    !data.TryGetProperty("addPullRequestReviewThreadReply", out var replyResult) ||
+                    !replyResult.TryGetProperty("comment", out var comment) ||
+                    !comment.TryGetProperty("id", out _))
+                {
+                    return ReviewThreadMutationResult.Failure("GitHub did not confirm that the reply was sent.");
+                }
+
+                return ReviewThreadMutationResult.Success();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return ReviewThreadMutationResult.Failure($"Sending the reply failed: {ex.Message}");
+            }
+        }
+
         /// <summary>
         /// Queries the GitHub GraphQL API to get review-thread node IDs and resolved state.
         /// Returns a dictionary keyed by the top-level review comment database ID.
@@ -254,7 +303,7 @@ namespace Diffinitely.Services
                 bool hasNextPage;
                 do
                 {
-                    var query = "query($owner:String!,$repo:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){nodes{id isResolved comments(first:1){nodes{databaseId}}} pageInfo{hasNextPage endCursor}}}}}";
+                    var query = "query($owner:String!,$repo:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){nodes{id isResolved isOutdated comments(first:1){nodes{databaseId}}} pageInfo{hasNextPage endCursor}}}}}";
                     using var response = await PostGraphQlAsync(query, new { owner, repo, number = prNumber, cursor }, ct);
                     if (!response.IsSuccessStatusCode) return result;
 
@@ -277,6 +326,9 @@ namespace Diffinitely.Services
                             continue;
                         }
 
+                        var isOutdated = thread.TryGetProperty("isOutdated", out var isOutdatedProp) &&
+                                         isOutdatedProp.ValueKind == JsonValueKind.True;
+
                         if (!thread.TryGetProperty("comments", out var comments) ||
                             !comments.TryGetProperty("nodes", out var commentNodes))
                         {
@@ -291,7 +343,8 @@ namespace Diffinitely.Services
                                 result[dbIdProp.GetInt64()] = new PullRequestReviewThread
                                 {
                                     Id = threadIdProp.GetString() ?? string.Empty,
-                                    IsResolved = isResolvedProp.GetBoolean()
+                                    IsResolved = isResolvedProp.GetBoolean(),
+                                    IsOutdated = isOutdated
                                 };
                             }
                         }

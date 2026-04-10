@@ -362,16 +362,18 @@
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
-                                            <!-- row 0: file + line -->
+                                            <!-- row 0: file + line + outdated badge -->
                                             <RowDefinition Height="Auto"/>
                                             <!-- row 1: author + time -->
                                             <RowDefinition Height="Auto"/>
                                             <!-- row 2: body -->
                                             <RowDefinition Height="Auto"/>
                                             <!-- row 3: actions -->
+                                            <RowDefinition Height="Auto"/>
+                                            <!-- row 4: reply -->
                                         </Grid.RowDefinitions>
 
-                                        <!-- Row 0: file path + line -->
+                                        <!-- Row 0: file path + line + outdated badge -->
                                         <StackPanel Orientation="Horizontal"
                                                     Grid.Row="0"
                                                     VerticalAlignment="Center"
@@ -384,6 +386,20 @@
                                             <TextBlock
                                                 Text="{Binding Line, StringFormat=Line {0}}"
                                                 Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                            <Border
+                                                Margin="8,0,0,0"
+                                                Padding="4,1"
+                                                CornerRadius="2"
+                                                BorderThickness="1"
+                                                BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                                                Background="{DynamicResource {x:Static styles:VsBrushes.InfoBackgroundKey}}"
+                                                Visibility="{Binding IsOutdated, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}">
+                                                <TextBlock
+                                                    Text="Outdated"
+                                                    FontSize="10"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.InfoTextKey}}"/>
+                                            </Border>
                                         </StackPanel>
 
                                         <!-- Row 1: avatar + author + timestamp -->
@@ -437,9 +453,25 @@
                                             <Button DockPanel.Dock="Left" Style="{StaticResource FlatListButtonStyle}" Command="{Binding UnresolveCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding CanUnresolve, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" ToolTip="Re-open this review thread">
                                                 <TextBlock Text="Re-open" FontSize="11"/>
                                             </Button>
+                                            <Button DockPanel.Dock="Left" Style="{StaticResource FlatListButtonStyle}" Command="{Binding JumpToDiffCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding CanJumpToDiff, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" ToolTip="Open diff for this file">
+                                                <TextBlock Text="Jump to Diff" FontSize="11"/>
+                                            </Button>
                                             <Button DockPanel.Dock="Right" Style="{StaticResource FlatListButtonStyle}" Command="{Binding ViewCommand}" Padding="4,2" Margin="0,0,8,0" HorizontalAlignment="Right">
                                                 <TextBlock Text="View" FontSize="11"/>
                                             </Button>
+                                        </DockPanel>
+
+                                        <!-- Row 4: reply -->
+                                        <DockPanel Grid.Row="4" VerticalAlignment="Center" LastChildFill="True" Margin="0,4,0,0" Visibility="{Binding CanReply, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatListButtonStyle}" Command="{Binding ReplyCommand}" Padding="6,3" Margin="6,0,0,0" ToolTip="Send reply">
+                                                <TextBlock Text="Reply" FontSize="11"/>
+                                            </Button>
+                                            <TextBox
+                                                Text="{Binding ReplyText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Padding="4,3"
+                                                FontSize="11"
+                                                AcceptsReturn="False"
+                                                ToolTip="Write a reply to this thread"/>
                                         </DockPanel>
                                     </Grid>
 

@@ -39,14 +39,16 @@ internal static class CommentThreadBuilder
 
     internal sealed class ReviewThreadState
     {
-        public ReviewThreadState(string reviewThreadId, bool isResolved)
+        public ReviewThreadState(string reviewThreadId, bool isResolved, bool isOutdated = false)
         {
             ReviewThreadId = reviewThreadId;
             IsResolved = isResolved;
+            IsOutdated = isOutdated;
         }
 
         public string ReviewThreadId { get; }
         public bool IsResolved { get; }
+        public bool IsOutdated { get; }
     }
 
     internal static IReadOnlyList<PrCommentItem> Build(
@@ -54,7 +56,9 @@ internal static class CommentThreadBuilder
         IReadOnlyDictionary<long, ReviewThreadState> threadStates,
         Func<CommentSnapshot, IAsyncCommand?> createViewCommand,
         Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?> createResolveCommand,
-        Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?> createUnresolveCommand)
+        Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?> createUnresolveCommand,
+        Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?>? createReplyCommand = null,
+        Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?>? createJumpToDiffCommand = null)
     {
         var orderedComments = comments.OrderBy(comment => comment.CreatedAt).ToList();
         var commentsById = orderedComments.ToDictionary(comment => comment.Id);
@@ -79,6 +83,8 @@ internal static class CommentThreadBuilder
 
             item.ResolveCommand = createResolveCommand(item, comment, threadState);
             item.UnresolveCommand = createUnresolveCommand(item, comment, threadState);
+            item.ReplyCommand = createReplyCommand?.Invoke(item, comment, threadState);
+            item.JumpToDiffCommand = createJumpToDiffCommand?.Invoke(item, comment, threadState);
             item.CanResolve = item.ResolveCommand is not null
                 && threadState is not null
                 && !threadState.IsResolved
@@ -87,6 +93,9 @@ internal static class CommentThreadBuilder
                 && threadState is not null
                 && threadState.IsResolved
                 && !string.IsNullOrWhiteSpace(threadState.ReviewThreadId);
+            item.IsOutdated = threadState?.IsOutdated ?? false;
+            item.CanReply = item.ReplyCommand is not null;
+            item.CanJumpToDiff = item.JumpToDiffCommand is not null;
 
             topLevelItems[comment.Id] = item;
         }
