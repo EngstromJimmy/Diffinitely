@@ -37,30 +37,14 @@
             </Style>
 
             <!-- Flat clickable button style with hover/pressed feedback -->
-            <Style x:Key="FlatListButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderBrush" Value="Transparent"/>
+            <Style x:Key="FlatListButtonStyle" TargetType="Button"
+                   BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogButtonStyleKey}}">
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding" Value="4,2"/>
                 <Setter Property="HorizontalAlignment" Value="Left"/>
                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="Cursor" Value="Hand"/>
-                <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
-                <Style.Triggers>
-                    <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonHoverActiveKey}}"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonHoverActiveBorderKey}}"/>
-                    </Trigger>
-                    <Trigger Property="IsPressed" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonDownKey}}"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonDownBorderKey}}"/>
-                    </Trigger>
-                    <Trigger Property="IsEnabled" Value="False">
-                        <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.GrayTextKey}}"/>
-                        <Setter Property="Opacity" Value="0.5"/>
-                    </Trigger>
-                </Style.Triggers>
             </Style>
 
             <!-- Tab theming -->

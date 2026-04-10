@@ -216,3 +216,25 @@ Only one button visible at a time:
 
 **Testing:** Build succeeded; all structural changes verified; no C# touched.
 
+---
+
+## Button Hover Color Fix (ThemedDialogButtonStyleKey Base)
+
+**Completed:** 2026-04-10  
+**Requested by:** Jimmy Engström
+
+**Summary:** Fixed persistent bright blue hover color on buttons by switching from custom Style.Triggers to VS built-in `ThemedDialogButtonStyleKey` base style.
+
+**Problem:** Previous attempts to fix hover colors using custom `IsMouseOver` triggers with `CommandBarHoverKey` and then `ToolWindowButtonHoverActiveKey` both rendered as bright blue in VS dark theme. Root cause: custom `Style.Triggers` for background color changes fight VS's own theming system in the Remote UI model.
+
+**Solution:**
+- Replaced `FlatListButtonStyle` custom triggers with `BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogButtonStyleKey}}"`
+- `ThemedDialogButtonStyleKey` is the VS built-in button style that handles hover, pressed, and disabled states correctly in ALL themes (dark, light, blue) automatically
+- Removed all custom `Background`, `BorderBrush`, `Foreground`, and `Style.Triggers` setters
+- Kept only layout properties: `BorderThickness`, `Padding`, `HorizontalAlignment`, `HorizontalContentAlignment`, `VerticalContentAlignment`, `Cursor`
+
+**Key Learning:** For VS Extensibility Remote UI buttons, `ThemedDialogButtonStyleKey` is the correct base style. Custom `IsMouseOver` triggers on `Background` do not work reliably and fight VS theming. Use the built-in themed style and only override layout/sizing properties.
+
+**Files Modified:** `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml` (lines 40-48)
+
+---
