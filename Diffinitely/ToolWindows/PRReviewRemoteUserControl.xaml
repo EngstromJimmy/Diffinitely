@@ -47,6 +47,32 @@
                 <Setter Property="Cursor" Value="Hand"/>
             </Style>
 
+            <!-- Transparent button style for buttons inside tree rows — no chrome, no hover border -->
+            <Style x:Key="TreeItemButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="2,1"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="HorizontalAlignment" Value="Left"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- Tab theming -->
             <Style TargetType="TabControl">
                 <Setter Property="Foreground"
@@ -229,7 +255,7 @@
 
                                     <!-- open diff / open file -->
                                     <Button
-                                        Style="{StaticResource FlatListButtonStyle}"
+                                        Style="{StaticResource TreeItemButtonStyle}"
                                         Command="{Binding OpenCommand}">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <vs:Image Source="{Binding Icon}"
@@ -256,7 +282,7 @@
 
                                     <!-- comment badge -->
                                     <Button
-                                        Style="{StaticResource FlatListButtonStyle}"
+                                        Style="{StaticResource TreeItemButtonStyle}"
                                         BorderThickness="0"
                                         Command="{Binding OpenCommentsCommand}">
                                         <Border

@@ -238,3 +238,25 @@ Only one button visible at a time:
 **Files Modified:** `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml` (lines 40-48)
 
 ---
+
+
+## Tree Item Button Style Split
+
+**Completed:** 2026-04-11
+**Requested by:** Jimmy Engström
+
+**Summary:** Tree item buttons (file/folder open and comment badge) inside TreeView.ItemTemplate now use a separate TreeItemButtonStyle that does NOT inherit from ThemedDialogButtonStyleKey.
+
+**Problem:** After switching FlatListButtonStyle to BasedOn=ThemedDialogButtonStyleKey, the tree items (files and folders in the diff tree) looked like buttons — showing button chrome, hover border, etc. The ThemedDialogButtonStyleKey base adds button chrome that directly conflicts with the TreeViewItem row highlight, making tree rows look wrong.
+
+**Solution:**
+- Added TreeItemButtonStyle in PRReviewRemoteUserControl.xaml (after FlatListButtonStyle) with a fully custom ControlTemplate (plain Border + ContentPresenter), no base style.
+- Style properties: Background=Transparent, BorderBrush=Transparent, BorderThickness=0, Padding=2,1, Cursor=Hand, Foreground bound to VsBrushes.WindowTextKey. No hover background — the TreeViewItem row highlight handles hover for the whole row.
+- Changed the two Button elements inside TreeView.ItemTemplate (HierarchicalDataTemplate) from FlatListButtonStyle to TreeItemButtonStyle.
+- All other buttons (toolbar, comment actions in ListView) keep FlatListButtonStyle unchanged.
+
+**Key Learning:** Tree item buttons need a separate style that does not inherit ThemedDialogButtonStyleKey, because that style adds button chrome that conflicts with the TreeViewItem row highlight. The TreeViewItem row highlight is responsible for hover feedback inside the tree — buttons inside tree rows must be visually transparent and let the row handle hover.
+
+**Files Modified:** Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml
+
+---
