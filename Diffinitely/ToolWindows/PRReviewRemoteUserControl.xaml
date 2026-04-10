@@ -10,8 +10,6 @@
         Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
 
         <Grid.RowDefinitions>
-            <!-- GitHub link row -->
-            <RowDefinition Height="Auto"/>
             <!-- toolbar row (Refresh etc) -->
             <RowDefinition Height="Auto"/>
             <!-- main content row (tabs) -->
@@ -41,7 +39,7 @@
             <!-- Flat clickable button style with hover/pressed feedback -->
             <Style x:Key="FlatListButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding" Value="4,2"/>
                 <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -51,12 +49,12 @@
                 <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
                 <Style.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarHoverKey}}"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarBorderKey}}"/>
+                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonHoverActiveKey}}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonHoverActiveBorderKey}}"/>
                     </Trigger>
                     <Trigger Property="IsPressed" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarSelectedKey}}"/>
-                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarBorderKey}}"/>
+                        <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonDownKey}}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowButtonDownBorderKey}}"/>
                     </Trigger>
                     <Trigger Property="IsEnabled" Value="False">
                         <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.GrayTextKey}}"/>
@@ -158,34 +156,10 @@
         </Grid.Resources>
 
         <!-- ===================== -->
-        <!-- VIEW ON GITHUB LINK (ROW 0) -->
-        <!-- ===================== -->
-        <Button
-            Grid.Row="0"
-            Style="{StaticResource FlatListButtonStyle}"
-            Command="{Binding OpenInBrowserCommand}"
-            HorizontalAlignment="Left"
-            Margin="0,0,0,4"
-            Padding="0"
-            ToolTip="Open this pull request on GitHub.com">
-            <Button.Visibility>
-                <Binding Path="PrHtmlUrl">
-                    <Binding.Converter>
-                        <local:StringEmptyToCollapsedConverter />
-                    </Binding.Converter>
-                </Binding>
-            </Button.Visibility>
-            <TextBlock
-                Foreground="#FF0969DA"
-                TextDecorations="Underline"
-                Text="🔗 View on GitHub" />
-        </Button>
-
-        <!-- ===================== -->
-        <!-- GLOBAL TOOLBAR (ROW 1) -->
+        <!-- GLOBAL TOOLBAR (ROW 0) -->
         <!-- ===================== -->
         <DockPanel
-            Grid.Row="1"
+            Grid.Row="0"
             LastChildFill="False"
             Margin="0,0,0,4"
             Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
@@ -205,6 +179,17 @@
                         Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
                 </StackPanel>
             </Button>
+            <Button
+                DockPanel.Dock="Left"
+                Style="{StaticResource FlatListButtonStyle}"
+                Command="{Binding OpenInBrowserCommand}"
+                Padding="4,2"
+                Margin="8,0,0,0"
+                Visibility="{Binding PrHtmlUrl, Converter={StaticResource StringEmptyToCollapsedConverter}}"
+                ToolTip="Open this pull request on GitHub.com">
+                <TextBlock Text="🔗 View on GitHub"
+                           Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+            </Button>
             <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
                 <ProgressBar Width="120" Height="14" IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
                 <TextBlock Margin="8,0,0,0" Text="{Binding LoadingText}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
@@ -213,10 +198,10 @@
         </DockPanel>
 
         <!-- ===================== -->
-        <!-- MAIN CONTENT (ROW 2) -->
+        <!-- MAIN CONTENT (ROW 1) -->
         <!-- ===================== -->
         <TabControl
-            Grid.Row="2"
+            Grid.Row="1"
             Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
             BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
             BorderThickness="1">
@@ -288,6 +273,7 @@
                                     <!-- comment badge -->
                                     <Button
                                         Style="{StaticResource FlatListButtonStyle}"
+                                        BorderThickness="0"
                                         Command="{Binding OpenCommentsCommand}">
                                         <Border
                                             VerticalAlignment="Center"
@@ -326,47 +312,45 @@
                     </Grid.RowDefinitions>
 
                     <!-- FILTER BAR -->
-                    <DockPanel
+                    <Grid
                         Grid.Row="0"
-                        LastChildFill="False"
-                        Margin="0,0,0,4"
-                        Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
-                        VerticalAlignment="Center">
+                        Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>   <!-- "Author:" label -->
+                            <ColumnDefinition Width="*" MinWidth="60" MaxWidth="160"/>  <!-- Author ComboBox -->
+                            <ColumnDefinition Width="8"/>      <!-- spacer -->
+                            <ColumnDefinition Width="Auto"/>   <!-- "Status:" label -->
+                            <ColumnDefinition Width="*" MinWidth="60" MaxWidth="120"/>  <!-- Status ComboBox -->
+                        </Grid.ColumnDefinitions>
 
-                        <!-- Author filter label -->
                         <TextBlock
+                            Grid.Column="0"
                             Text="Author:"
                             Margin="0,0,6,0"
                             VerticalAlignment="Center"
                             Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
 
-                        <!-- Author filter dropdown -->
                         <ComboBox
-                            Width="160"
+                            Grid.Column="1"
                             ItemsSource="{Binding AllAuthors}"
                             SelectedItem="{Binding SelectedAuthor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            ToolTip="Filter comments by author">
-                        </ComboBox>
+                            ToolTip="Filter comments by author"/>
 
-                        <!-- Resolution filter label -->
                         <TextBlock
+                            Grid.Column="3"
                             Text="Status:"
                             Margin="0,0,6,0"
                             VerticalAlignment="Center"
                             Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
 
-                        <!-- Resolution filter dropdown -->
                         <ComboBox
-                            Width="120"
+                            Grid.Column="4"
                             ItemsSource="{Binding AllResolutionFilters}"
                             SelectedItem="{Binding SelectedResolutionFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            ToolTip="Filter by resolution status">
-                        </ComboBox>
-                    </DockPanel>
+                            ToolTip="Filter by resolution status"/>
+                    </Grid>
 
                     <!-- COMMENT LIST -->
                     <ListView
@@ -498,9 +482,6 @@
                                             </Button>
                                             <Button DockPanel.Dock="Left" Style="{StaticResource FlatListButtonStyle}" Command="{Binding JumpToDiffCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding CanJumpToDiff, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" ToolTip="Open diff for this file">
                                                 <TextBlock Text="Jump to Diff" FontSize="11"/>
-                                            </Button>
-                                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatListButtonStyle}" Command="{Binding ViewCommand}" Padding="4,2" Margin="0,0,8,0" HorizontalAlignment="Right">
-                                                <TextBlock Text="View" FontSize="11"/>
                                             </Button>
                                         </DockPanel>
 

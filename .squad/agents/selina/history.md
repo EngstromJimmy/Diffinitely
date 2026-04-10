@@ -170,3 +170,49 @@ Only one button visible at a time:
 
 **Key Learning:** In VS Extensibility Remote UI, NEVER use `ControlTemplate.Triggers` — they are silently ignored. Always use `Style.Triggers` for interactive visual feedback.
 
+---
+
+## UI Polish (5-Fix Batch)
+
+**Completed:** 2026-04-10  
+**Requested by:** Jimmy Engström
+
+**Summary:** Applied 5 targeted UI polish fixes to the PR review tool window to improve layout efficiency, visual consistency, and correct theming.
+
+**Changes:**
+
+1. **Consolidated toolbar layout:**
+   - Moved "View on GitHub" button from standalone row into toolbar DockPanel next to Refresh button
+   - Removed GitHub link row definition; reduced outer Grid from 3 rows to 2
+   - Updated link button to use themed window text color (removed hardcoded blue `#FF0969DA`)
+
+2. **Fixed hover/pressed colors:**
+   - Changed `FlatListButtonStyle` from incorrect `CommandBarHoverKey`/`CommandBarSelectedKey` (bright blue in dark theme) to correct `ToolWindowButtonHoverActiveKey`/`ToolWindowButtonDownKey` (subtle gray)
+   - These `ToolWindowButton*` brushes are the VS-native colors for interactive content inside tool windows
+
+3. **Removed obsolete "View" button:**
+   - Deleted "View" button from comment action bar (Row 3 in comment DataTemplate)
+   - `ViewCommand` stays in ViewModel but is no longer exposed in UI
+
+4. **Made filter dropdowns responsive:**
+   - Replaced fixed-width DockPanel filter bar with Grid layout using star sizing
+   - Author ComboBox: `Width="*"` with `MinWidth="60" MaxWidth="160"`
+   - Status ComboBox: `Width="*"` with `MinWidth="60" MaxWidth="120"`
+   - Dropdowns now shrink gracefully when window is narrow instead of clipping
+
+5. **Removed default borders from tree items:**
+   - Changed `FlatListButtonStyle` default `BorderBrush` from `ToolWindowBorderKey` to `Transparent`
+   - Keeps 1px border slot so layout doesn't shift on hover
+   - Added `BorderThickness="0"` override to comment count badge Button (which wraps its own styled Border element)
+   - File/folder buttons and badges no longer show box borders at rest
+
+**Pattern Notes:**
+- The correct hover brushes for tool window content are `ToolWindowButton*`, not `CommandBar*`
+- `CommandBar*` brushes are for main VS toolbar/menu chrome and render wrong in tool window contexts
+- Star-sized Grid columns with MinWidth/MaxWidth are the right pattern for responsive filter bars
+- For buttons that wrap styled inner elements (like the badge), override `BorderThickness="0"` directly on the Button instance
+
+**Files Modified:** `PRReviewRemoteUserControl.xaml` (XAML-only changes)
+
+**Testing:** Build succeeded; all structural changes verified; no C# touched.
+
