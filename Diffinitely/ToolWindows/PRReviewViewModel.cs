@@ -221,6 +221,21 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                         item,
                         ReloadTreeInternalAsync,
                         message => Status = message);
+                },
+                (item, _, threadState) =>
+                {
+                    if (threadState is null ||
+                        !threadState.IsResolved ||
+                        string.IsNullOrWhiteSpace(threadState.ReviewThreadId))
+                    {
+                        return null;
+                    }
+
+                    return new UnresolveCommand(
+                        _prService,
+                        item,
+                        ReloadTreeInternalAsync,
+                        message => Status = message);
                 });
 
             foreach (var item in commentItems)

@@ -73,3 +73,57 @@
 - `PathTreeBuilder` uses an `Action<TreeNode, ChangedFileInfo>? leafDecorator` pattern so that VS-specific command wiring stays out of the testable core.
 - All 5 xUnit tests pass cleanly with `dotnet test` on net472.
 
+### 2026-03-13 — Unresolve/Re-open test coverage mirrors Resolve pattern exactly
+
+- Added comprehensive test coverage for Unresolve/Re-open functionality following the exact same patterns as existing Resolve tests
+- Created `UnresolveCommandTests.cs` (5 tests) covering: command gating (only executable when `IsResolved == true` and `ReviewThreadId` valid), happy path (successful mutation + reload), failure path (no reload on mutation failure), and thread ID validation
+- Created `CommentActionAvailabilityTests.cs` (5 tests) verifying mutual exclusivity: when comment is resolved, only Unresolve available; when unresolved, only Resolve available; when thread ID missing, both suppressed
+- All tests use internal constructor injection pattern to provide mock mutation delegates, avoiding need for actual GitHub API calls
+- Test suite now at 23 tests, all passing. Unresolve feature fully covered at same rigor level as Resolve.
+
+### 2026-04-10 — Unresolve/Re-open Feature Complete (Team Synchronization)
+
+**Status:** Complete and merged to decisions.
+
+**Summary:** Full end-to-end unresolve/re-open feature delivered by three-agent team (Lucius backend, Selina frontend, Renee testing). All 23 tests passing. Feature is production-ready.
+
+**Test Coverage:**
+
+**UnresolveCommandTests.cs** (5 tests):
+- ✅ `CanExecute` gating: Executable only when `IsResolved == true` AND `ReviewThreadId` valid
+- ✅ Happy path: GitHub API call succeeds, comments reload, status message displayed
+- ✅ Failure path: Mutation fails, no reload occurs, error surfaces to user
+- ✅ Thread ID validation: Command blocked when ID missing/null/empty
+- ✅ Cancellation: Token propagated; operation stops when cancelled
+
+**CommentActionAvailabilityTests.cs** (5 tests):
+- ✅ Mutual exclusivity: `IsResolved=true` → only Unresolve available; `IsResolved=false` → only Resolve
+- ✅ No thread ID suppression: Both commands unavailable when thread ID is null/empty/whitespace
+- ✅ Cross-command verification: Single comment instantiates both; exactly one available at a time
+- ✅ State flip blocking: Unresolve cannot flip unresolved threads; Resolve cannot flip resolved threads
+- ✅ Reload on success validation: Comments reload after unresolve; filters preserved
+
+**Risk Coverage:**
+- ✅ Unresolve cannot flip resolved comments locally without GitHub confirmation
+- ✅ Failed unresolve mutation surfaces error; does not hide failure via reload
+- ✅ Comments without thread metadata cannot show resolve or unresolve affordances
+- ✅ Resolved and unresolved states are mutually exclusive at command level
+- ✅ Status messages guide user through operation lifecycle
+
+**Integration:**
+- **Lucius:** `UnresolveCommand` + `GitHubPullRequestService.UnresolveReviewThreadAsync` ✅
+- **Selina:** Re-open button XAML + `CanUnresolve` property + builder wiring ✅
+- **Renee:** Comprehensive test coverage ✅
+
+**Files affected:**
+- Commands/UnresolveCommand.cs (new)
+- Services/GitHubPullRequestService.cs (unresolve method added)
+- Models/PrCommentItem.cs (UnresolveCommand + CanUnresolve properties)
+- ToolWindows/CommentThreadBuilder.cs (build signature extended)
+- ToolWindows/PRReviewViewModel.cs (unresolve factory added)
+- ToolWindows/PRReviewRemoteUserControl.xaml (Re-open button added)
+- Tests/UnresolveCommandTests.cs (new)
+- Tests/CommentActionAvailabilityTests.cs (new)
+
+**Next:** Scribe orchestration log and decision consolidation complete. Ready for git commit.
+

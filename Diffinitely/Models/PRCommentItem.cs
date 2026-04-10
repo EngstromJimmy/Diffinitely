@@ -38,9 +38,13 @@ public class PrCommentItem
     public bool CanResolve { get; set; }
 
     [DataMember]
+    public bool CanUnresolve { get; set; }
+
+    [DataMember]
     public ObservableCollection<PrCommentReply> ThreadReplies { get; set; } = new();
 
     [DataMember] public IAsyncCommand? ResolveCommand { get; set; }
+    [DataMember] public IAsyncCommand? UnresolveCommand { get; set; }
     [DataMember] public IAsyncCommand? ViewCommand { get; set; }
 }
 

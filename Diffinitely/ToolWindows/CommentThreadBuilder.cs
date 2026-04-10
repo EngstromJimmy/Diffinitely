@@ -53,7 +53,8 @@ internal static class CommentThreadBuilder
         IEnumerable<CommentSnapshot> comments,
         IReadOnlyDictionary<long, ReviewThreadState> threadStates,
         Func<CommentSnapshot, IAsyncCommand?> createViewCommand,
-        Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?> createResolveCommand)
+        Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?> createResolveCommand,
+        Func<PrCommentItem, CommentSnapshot, ReviewThreadState?, IAsyncCommand?> createUnresolveCommand)
     {
         var orderedComments = comments.OrderBy(comment => comment.CreatedAt).ToList();
         var commentsById = orderedComments.ToDictionary(comment => comment.Id);
@@ -77,9 +78,14 @@ internal static class CommentThreadBuilder
             };
 
             item.ResolveCommand = createResolveCommand(item, comment, threadState);
+            item.UnresolveCommand = createUnresolveCommand(item, comment, threadState);
             item.CanResolve = item.ResolveCommand is not null
                 && threadState is not null
                 && !threadState.IsResolved
+                && !string.IsNullOrWhiteSpace(threadState.ReviewThreadId);
+            item.CanUnresolve = item.UnresolveCommand is not null
+                && threadState is not null
+                && threadState.IsResolved
                 && !string.IsNullOrWhiteSpace(threadState.ReviewThreadId);
 
             topLevelItems[comment.Id] = item;

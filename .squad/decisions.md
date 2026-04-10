@@ -2,6 +2,38 @@
 
 ## Active Decisions
 
+### Decision: Unresolve/Re-open Review Thread Feature Complete
+
+**Author:** Team (Lucius, Selina, Renee)  
+**Date:** 2026-04-10  
+**Related Work:** Follow-on to Issue #10 (Resolve feature)  
+**Status:** Complete
+
+**Summary:** Full end-to-end unresolve/re-open feature delivered. Users can now re-open previously resolved review threads directly from the PR comments view. Architecture mirrors existing Resolve feature exactly.
+
+**What changed:**
+1. **Service layer:** `GitHubPullRequestService.UnresolveReviewThreadAsync` GraphQL mutation (validates thread ID, reports failures, confirms response)
+2. **Command:** `UnresolveCommand.cs` — identical structure to `ResolveCommand`, gated by `IsResolved == true`
+3. **Model:** `PrCommentItem` carries `UnresolveCommand` + `CanUnresolve` properties
+4. **Builder:** `CommentThreadBuilder.Build` extended with `createUnresolveCommand` factory parameter
+5. **ViewModel:** `PRReviewViewModel` wires unresolve command factory; creates command only when thread resolved
+6. **UI:** Re-open button added to XAML with mutually exclusive visibility vs. Resolve button
+7. **Tests:** 10 comprehensive tests (5 command tests, 5 mutual-exclusivity tests); all 23 suite tests passing
+
+**Patterns preserved:**
+- Async throughout; no blocking calls
+- Cancellation tokens propagated
+- GraphQL validation before success
+- Command gating by model state
+- Post-mutation reload from GitHub
+- Failure reporting (not silent)
+
+**Files:** GitHubPullRequestService.cs, UnresolveCommand.cs, PrCommentItem.cs, CommentThreadBuilder.cs, PRReviewViewModel.cs, PRReviewRemoteUserControl.xaml, UnresolveCommandTests.cs, CommentActionAvailabilityTests.cs
+
+**Risk coverage:** All edge cases tested — no unresolve without GitHub confirmation, no silent failures, mutual exclusivity enforced, missing thread metadata suppresses affordance.
+
+---
+
 ### Decision: Issue #10 Backend Implementation Complete
 
 **Author:** Lucius (Backend Dev)  
