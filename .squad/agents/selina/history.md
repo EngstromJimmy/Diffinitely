@@ -57,6 +57,7 @@
 - **VsBrushes keys verified to exist at runtime (2026-04-11):** The following keys are confirmed valid and can be safely used in XAML: `AccentBorderKey`, `GrayTextKey`, `InfoBackgroundKey`, `InfoTextKey`, `ToolWindowBackgroundKey`, `ToolWindowBorderKey`, `WindowKey`, `WindowTextKey`. These were validated by the regression test `XamlStaticReferenceTests.PRReviewRemoteUserControl_XamlStaticReferences_AllResolveAtRuntime`.
 - **VsResourceKeys keys verified to exist at runtime (2026-04-11):** The following keys are confirmed valid: `ThemedDialogButtonStyleKey`, `ThemedDialogComboBoxStyleKey`, `ThemedDialogTreeViewItemStyleKey`, `ThemedDialogTreeViewStyleKey`. Note that `ThemedDialogTabItemStyleKey` does NOT exist.
 - **XAML static reference validation approach:** Created `XamlStaticReferenceTests.cs` which parses XAML as XML, extracts all `{x:Static styles:VsBrushes.*}` and `{x:Static styles:VsResourceKeys.*}` references using regex, then uses reflection to verify each referenced field/property exists on the target type. This prevents runtime XamlParseException crashes from non-existent keys. The test loads `Microsoft.VisualStudio.Shell.15.0.dll` from the NuGet package cache and reflects on the actual types at test time.
+- **Seamless active tab technique (2026-04-11):** To make the active tab visually merge with the content panel below it (no visible seam), three things must work together: (1) `BorderThickness="1,2,1,0"` removes the bottom border of the active tab, (2) `Margin="0,0,0,-1"` on `TabBorder` extends the tab 1px down to overlap/cover the TabControl's top border line, (3) `Panel.ZIndex="1"` on the TabItem (set without `TargetName` — on the item itself, not a named child) renders the active tab on top of the TabControl border. Additionally the active tab background MUST match the content area background (`ToolWindowBackgroundKey` for both) or a color seam will still be visible. The `Panel.ZIndex` setter was placed in `ControlTemplate.Triggers` (not `Style.Triggers`) — this worked for the TabItem case even though ControlTemplate.Triggers are documented as unreliable for Buttons in VS Remote UI.
 
 ---
 
@@ -292,6 +293,25 @@ The comment DataTemplate in the ListView (Comments tab) has four logical section
 - **Row 1 body**: StackPanel with Body TextBlock (TextWrapping=Wrap) + ThreadReplies ItemsControl (nested DataTemplate shows Author, CreatedAt, Body)
 - **Row 2 actions**: DockPanel with Resolve button (ResolveCommand/CanResolve), Re-open button (UnresolveCommand/CanUnresolve), Jump to Diff button (JumpToDiffCommand/CanJumpToDiff) — all use TreeItemButtonStyle
 - **Row 3 reply**: DockPanel (visible via CanReply) with Reply button (ReplyCommand) docked right, and TextBox bound to ReplyText (TwoWay)
+
+## 2025 — Remove inner borders (flow cleanup)
+
+**Task:** Remove nested `BorderThickness="1"` borders inside the Files and Comments tabs so content flows cleanly inside the seamless tab container.
+
+**Lines changed in `PRReviewRemoteUserControl.xaml`:**
+- Line 402: Comment card `Border` (DataTemplate root, `CornerRadius="4"`) → `BorderThickness="0"` (was `1`)
+- Line 475: Thread reply `Border` (`CornerRadius="3"`) inside ThreadReplies ItemsControl → `BorderThickness="0"` (was `1`)
+
+**Already 0 (no change needed):**
+- Line 243: TreeView `BorderThickness` was already `0`
+- Line 381: ListView `BorderThickness` was already `0`
+
+**Kept as-is:**
+- Line 226: TabControl `BorderThickness="1"` — the outer tab container border, keep
+- Line 448: "Outdated" badge `Border` `BorderThickness="1"` — small UI badge, intentional
+- Line 551: Status bar `BorderThickness="0,1,0,0"` — top separator line, keep
+
+Build: 0 errors, 25 warnings (pre-existing). All 39 tests pass.
 
 Do NOT flatten this to just the header — all four sections are required.
 
