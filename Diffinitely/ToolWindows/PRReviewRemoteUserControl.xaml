@@ -86,9 +86,70 @@
                 <Setter Property="BorderThickness" Value="1"/>
             </Style>
 
-            <Style TargetType="TabItem"
-                   BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogTabItemStyleKey}}">
+            <Style TargetType="TabItem">
+                <!-- Inactive tab defaults -->
+                <Setter Property="Foreground"
+                    Value="{DynamicResource {x:Static styles:VsBrushes.GrayTextKey}}"/>
+                <Setter Property="Background"
+                    Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                <Setter Property="BorderBrush"
+                    Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
                 <Setter Property="Padding" Value="8,4" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="3,3,0,0"
+                                Padding="{TemplateBinding Padding}">
+                                <!--
+                                    DO NOT set TextElement.Foreground here.
+                                    Let it inherit so ControlTemplate.Triggers can change text color.
+                                -->
+                                <ContentPresenter
+                                    x:Name="ContentSite"
+                                    ContentSource="Header"
+                                    RecognizesAccessKey="True"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    SnapsToDevicePixels="True"/>
+                            </Border>
+
+                            <ControlTemplate.Triggers>
+
+                                <!-- SELECTED: content-area background, full text brightness, thicker top edge -->
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="TabBorder" Property="Background"
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowContentBackgroundKey}}"/>
+                                    <Setter TargetName="TabBorder" Property="BorderBrush"
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                    <Setter TargetName="TabBorder" Property="BorderThickness"
+                                        Value="1,2,1,0"/>
+                                    <Setter Property="Foreground"
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                </Trigger>
+
+                                <!-- HOVER: subtle lift, full text brightness -->
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="TabBorder" Property="Background"
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarMouseOverBackgroundBeginKey}}"/>
+                                    <Setter TargetName="TabBorder" Property="BorderBrush"
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                    <Setter Property="Foreground"
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                </Trigger>
+
+                                <!-- DISABLED -->
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="TabBorder" Property="Opacity" Value="0.5"/>
+                                </Trigger>
+
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
 
