@@ -122,7 +122,7 @@
                                 <!-- SELECTED: content-area background, full text brightness, thicker top edge -->
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter TargetName="TabBorder" Property="Background"
-                                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowContentBackgroundKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowKey}}"/>
                                     <Setter TargetName="TabBorder" Property="BorderBrush"
                                         Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
                                     <Setter TargetName="TabBorder" Property="BorderThickness"
@@ -134,7 +134,7 @@
                                 <!-- HOVER: subtle lift, full text brightness -->
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="TabBorder" Property="Background"
-                                        Value="{DynamicResource {x:Static styles:VsBrushes.CommandBarMouseOverBackgroundBeginKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowKey}}"/>
                                     <Setter TargetName="TabBorder" Property="BorderBrush"
                                         Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
                                     <Setter Property="Foreground"
