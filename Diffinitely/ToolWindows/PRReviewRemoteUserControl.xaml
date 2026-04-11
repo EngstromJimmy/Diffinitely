@@ -330,7 +330,7 @@
                     <!-- FILTER BAR -->
                     <Grid
                         Grid.Row="0"
-                        Margin="4,4,4,4">
+                        Margin="14,4,14,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>   <!-- "Author:" label -->
                             <ColumnDefinition Width="*" MinWidth="60" MaxWidth="160"/>  <!-- Author ComboBox -->

@@ -430,3 +430,33 @@ Do NOT flatten this to just the header — all four sections are required.
 **Testing:**
 - `dotnet build --no-incremental -verbosity:minimal` — 0 errors, 25 warnings (pre-existing)
 - `dotnet test --no-build -verbosity:minimal` — all 38 tests passing
+
+---
+
+## Sticky Footer with Progress Bar
+
+**Completed:** 2026-04-14
+**Requested by:** Jimmy Engström
+
+**Summary:** Moved the loading `ProgressBar` out of the toolbar (Row 0) and into the status bar footer (Row 2), making the footer always visible (sticky) to eliminate layout jumps.
+
+**Changes in `PRReviewRemoteUserControl.xaml`:**
+
+1. **Removed from Row 0 toolbar DockPanel:**
+   - `<StackPanel>` containing the wide ProgressBar (Height="14") and LoadingText TextBlock, both bound to `IsLoading`
+
+2. **Rewrote Row 2 status border:**
+   - Removed `Visibility="{Binding Status, Converter={StaticResource StringEmptyToCollapsedConverter}}"` — footer is now always visible
+   - Inside the border, replaced the single TextBlock with a `DockPanel`:
+     - `ProgressBar` docked left: `Width="120"`, `Height="4"` (thin VS-style), `IsIndeterminate="True"`, visible only when `IsLoading` is true
+     - `TextBlock` fills remaining space, bound to `Status`, `FontSize="11"`, `VerticalAlignment="Center"`
+   - Kept `BorderThickness="0,1,0,0"` top separator and `Padding="4,2"`
+
+**Key Learnings:**
+- Thin progress bars (`Height="4"`) match VS's own indeterminate loading indicator style — much better than the previous `Height="14"` chunky bar in the toolbar.
+- Making the footer always visible (removing the StringEmptyToCollapsedConverter) eliminates layout jumps when content loads. Empty state is fine — the footer just shows nothing.
+- `DockPanel` inside a Border works cleanly for this left-dock + fill pattern; no Grid needed.
+
+**Testing:**
+- `dotnet build Diffinitely --no-restore` — Build succeeded, 0 errors
+- `dotnet test Diffinitely.Tests --no-restore -v quiet` — All 39 tests pass
