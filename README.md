@@ -9,15 +9,17 @@ A Visual Studio 2022 extension that brings GitHub pull request reviews directly 
 
 ## Overview
 
-Diffinitely adds a **Pull Request Review** tool window to Visual Studio 2022. It automatically detects the current Git branch, finds the corresponding GitHub pull request, and presents all changed files and review comments in a side panel — with one-click diff viewing powered by Visual Studio's built-in differ.
+Diffinitely adds a **Pull Request Review** tool window to Visual Studio 2022. It automatically detects the current Git branch, finds the corresponding GitHub pull request, and presents changed files and review comments in a tabbed side panel. Open diffs with one click, reply to review threads, and jump to GitHub — all without leaving the IDE.
 
 ## Features
 
 - **Changed Files Tree** — Browse all PR-changed files in a hierarchical tree with file-type icons, change kind indicators (Added, Modified, Deleted, Renamed), and comment count badges.
-- **Side-by-Side Diff** — Open any file in VS's native diff viewer, comparing the base version against the PR version.
-- **Review Comments** — View all PR review comments with author avatars, file paths, line numbers, and thread replies.
+- **Side-by-Side Diff** — Open any file in VS's native diff viewer, comparing the base version against the PR version. Use the **View** button on a comment to open the diff for that specific file.
+- **Review Comments** — View all PR review comments with author avatars, file paths, timestamps, thread replies, and outdated badges. Reply to any thread directly from the extension.
 - **Comment Filtering** — Filter comments by author and by resolution status (All / Resolved / Unresolved).
-- **VS Theme Support** — Fully integrates with Visual Studio's dark and light themes.
+- **View on GitHub** — Opens the current pull request on GitHub.com in your default browser.
+- **Status Bar** — A persistent footer always shows the current status (e.g., "Reply sent") and a loading indicator while data is being fetched.
+- **VS Theme Support** — Fully integrates with Visual Studio's dark and light themes, including VS-styled tabs with hover and active-tab effects.
 - **Zero Extra Credentials** — Picks up your GitHub token automatically from Git Credential Manager.
 
 ## Requirements
