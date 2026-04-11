@@ -240,7 +240,7 @@
                         Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
                         BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                         Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                        BorderThickness="1"
+                        BorderThickness="0"
                         Padding="4">
 
                         <TreeView.ItemContainerStyle>
@@ -378,7 +378,7 @@
                         Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
                         BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                         Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                        BorderThickness="1"
+                        BorderThickness="0"
                         Padding="4"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                         ScrollViewer.VerticalScrollBarVisibility="Auto"
