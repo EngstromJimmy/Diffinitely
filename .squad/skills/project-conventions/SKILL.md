@@ -19,6 +19,18 @@ For comment-thread actions such as resolve/unresolve, carry the GitHub review th
 ### Rebuild comment threads from reply ancestry, not file+line
 
 For PR comments, only actual GitHub reply ancestry defines a thread. Walk `InReplyToId` back to the top-level comment and attach replies there; do not merge sibling top-level comments just because they share the same file path and line number.
+
+### Inverse/symmetrical command pairs
+
+When implementing inverse actions (resolve/unresolve, enable/disable, lock/unlock), mirror the implementation precisely:
+- Both commands share the same service-layer signature pattern (same parameters, same result type)
+- Both use identical error handling and validation logic
+- Command gating is opposite: resolve is enabled when `!IsResolved`, unresolve when `IsResolved`
+- Both reload data from the service after successful mutation
+- Tests cover the inverse gate condition for both commands
+
+This keeps the codebase symmetric and predictable — once developers understand one half, they immediately understand the other.
+
 ### Refresh from server after action-based state changes
 
 When a UI action changes server-backed state that also drives filtering or visibility, prefer reloading the affected data from the service after success unless the model already has reliable property-change wiring. In this codebase, that is the safer default for comment resolution because the comments pane filters on resolved/unresolved state and must reflect GitHub truth immediately.

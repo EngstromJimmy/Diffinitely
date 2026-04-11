@@ -2,6 +2,107 @@
 
 ## Active Decisions
 
+### Decision: VS Extensibility Remote UI Button Visual Feedback Pattern
+
+**Author:** Selina (Frontend Dev)  
+**Date:** 2026-04-10  
+**Related Work:** Button visual states fix  
+**Status:** Approved pattern for all future button work
+
+**Summary:** In `Microsoft.VisualStudio.Extensibility` Remote UI, button visual states (hover, pressed) MUST be implemented using `Style.Triggers`, not `ControlTemplate.Triggers`. The latter are silently ignored by the remote UI rendering engine.
+
+**The Problem:**
+Buttons in the tool window had no visual feedback:
+- No hover state (background color didn't change on mouse-over)
+- No pressed state (no visual indication when clicked)
+- No cursor change (didn't show hand cursor)
+- Poor affordance — users couldn't tell if elements were clickable
+
+**The Solution:**
+Replace `ControlTemplate`-based styles with `Style.Triggers` directly. Use VS-themed brushes:
+- **Default:** `Transparent` background, `VsBrushes.ToolWindowBorderKey` border
+- **Hover:** `VsBrushes.CommandBarHoverKey` background
+- **Pressed:** `VsBrushes.CommandBarSelectedKey` background
+- **Disabled:** `VsBrushes.GrayTextKey` foreground with 0.5 opacity
+
+**Why This Works:**
+- `Style.Triggers` are evaluated by the Remote UI host and propagate to rendered controls
+- `ControlTemplate.Triggers` are NOT evaluated — they exist in XAML but have no runtime effect
+- VS-themed brushes dynamically adapt to light/dark themes
+- `Cursor="Hand"` provides immediate affordance
+
+**Files Changed:** `PRReviewRemoteUserControl.xaml`
+
+**Testing:** All 38 tests pass; build succeeded; visual inspection confirms hover, pressed, and disabled states render correctly.
+
+**Governance:** This pattern is the standard for all button styles in VS Extensibility Remote UI XAML. If you need custom button visuals, fork `FlatListButtonStyle` and modify the trigger setters — never use `ControlTemplate.Triggers`.
+
+---
+
+### Decision: View on GitHub Link Implementation
+
+**Author:** Lucius (Backend Dev)  
+**Date:** 2026-04-10  
+**Status:** Complete
+
+**Summary:** Added a clickable "View on GitHub" link at the top of the PR review tool window that opens the current pull request on GitHub.com in the user's default browser.
+
+**What Changed:**
+1. **Data model:** `PullRequestInfo.HtmlUrl` captures GitHub web URL from Octokit `PullRequest.HtmlUrl`
+2. **Command:** `OpenInBrowserCommand` — minimal IAsyncCommand that opens URL with `Process.Start`
+3. **ViewModel:** `PRReviewViewModel.PrHtmlUrl` property + `OpenInBrowserCommand` wired when PR loaded
+4. **UI:** New Row 0 with hyperlink-styled button (underline, blue, emoji 🔗)
+5. **Converter:** `StringEmptyToCollapsedConverter` hides link when no PR loaded
+
+**Why This Approach:**
+- VS Extensibility Remote UI does not reliably support WPF `Hyperlink` navigation. A button styled as link is recommended.
+- Follows existing command architecture (`ResolveCommand`, `UnresolveCommand`, etc.)
+- Dynamic command creation prevents dead clicks
+- Browser launch failures are silent — convenience feature, not critical path
+
+**Risks Covered:**
+- No PR loaded: Link hidden via visibility binding
+- Empty URL: CanExecute gate prevents execution
+- Browser launch failure: Caught silently
+
+**Files Modified:** `PullRequestInfo.cs`, `GitHubPullRequestService.cs`, `OpenInBrowserCommand.cs` (new), `PRReviewViewModel.cs`, `StringEmptyToCollapsedConverter.cs` (new), `PRReviewRemoteUserControl.xaml`
+
+**Testing:** Build succeeded; all 38 tests passed.
+
+---
+
+### Decision: Unresolve/Re-open Review Thread Feature Complete
+
+**Author:** Team (Lucius, Selina, Renee)  
+**Date:** 2026-04-10  
+**Related Work:** Follow-on to Issue #10 (Resolve feature)  
+**Status:** Complete
+
+**Summary:** Full end-to-end unresolve/re-open feature delivered. Users can now re-open previously resolved review threads directly from the PR comments view. Architecture mirrors existing Resolve feature exactly.
+
+**What changed:**
+1. **Service layer:** `GitHubPullRequestService.UnresolveReviewThreadAsync` GraphQL mutation (validates thread ID, reports failures, confirms response)
+2. **Command:** `UnresolveCommand.cs` — identical structure to `ResolveCommand`, gated by `IsResolved == true`
+3. **Model:** `PrCommentItem` carries `UnresolveCommand` + `CanUnresolve` properties
+4. **Builder:** `CommentThreadBuilder.Build` extended with `createUnresolveCommand` factory parameter
+5. **ViewModel:** `PRReviewViewModel` wires unresolve command factory; creates command only when thread resolved
+6. **UI:** Re-open button added to XAML with mutually exclusive visibility vs. Resolve button
+7. **Tests:** 10 comprehensive tests (5 command tests, 5 mutual-exclusivity tests); all 23 suite tests passing
+
+**Patterns preserved:**
+- Async throughout; no blocking calls
+- Cancellation tokens propagated
+- GraphQL validation before success
+- Command gating by model state
+- Post-mutation reload from GitHub
+- Failure reporting (not silent)
+
+**Files:** GitHubPullRequestService.cs, UnresolveCommand.cs, PrCommentItem.cs, CommentThreadBuilder.cs, PRReviewViewModel.cs, PRReviewRemoteUserControl.xaml, UnresolveCommandTests.cs, CommentActionAvailabilityTests.cs
+
+**Risk coverage:** All edge cases tested — no unresolve without GitHub confirmation, no silent failures, mutual exclusivity enforced, missing thread metadata suppresses affordance.
+
+---
+
 ### Decision: Issue #10 Backend Implementation Complete
 
 **Author:** Lucius (Backend Dev)  

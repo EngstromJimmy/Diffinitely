@@ -21,9 +21,13 @@ internal class PRReviewViewModel : INotifyPropertyChanged
     private string _status = string.Empty;
     private string? _selectedAuthor;
     private string? _selectedResolutionFilter = "<All>";
+    private string _prHtmlUrl = string.Empty;
 
     [DataMember]
     public IAsyncCommand RefreshCommand { get; }
+
+    [DataMember]
+    public IAsyncCommand? OpenInBrowserCommand { get; private set; }
 
     [DataMember]
     public ObservableCollection<string> AllAuthors { get; } = new();
@@ -115,6 +119,24 @@ internal class PRReviewViewModel : INotifyPropertyChanged
         }
     }
 
+    [DataMember]
+    public string PrHtmlUrl
+    {
+        get => _prHtmlUrl;
+        set
+        {
+            if (_prHtmlUrl != value)
+            {
+                _prHtmlUrl = value;
+                RaisePropertyChanged(nameof(PrHtmlUrl));
+                OpenInBrowserCommand = string.IsNullOrWhiteSpace(value) 
+                    ? null 
+                    : new OpenInBrowserCommand(value);
+                RaisePropertyChanged(nameof(OpenInBrowserCommand));
+            }
+        }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public PRReviewViewModel(
@@ -170,9 +192,12 @@ internal class PRReviewViewModel : INotifyPropertyChanged
             if (pr == null)
             {
                 Roots.Clear();
+                PrHtmlUrl = string.Empty;
                 LoadingText = "No pull request for current branch.";
                 return;
             }
+
+            PrHtmlUrl = pr.HtmlUrl ?? string.Empty;
 
             LoadingText = "Loading changed files...";
             var built = BuildTreeFromPaths(pr.ChangedFiles, pr);
@@ -203,7 +228,10 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                     comment.InReplyToId)),
                 pr.ReviewThreads.ToDictionary(
                     entry => entry.Key,
-                    entry => new CommentThreadBuilder.ReviewThreadState(entry.Value.Id, entry.Value.IsResolved)),
+                    entry => new CommentThreadBuilder.ReviewThreadState(
+                        entry.Value.Id,
+                        entry.Value.IsResolved,
+                        entry.Value.IsOutdated)),
                 comment => string.IsNullOrWhiteSpace(comment.FilePath)
                     ? null
                     : new OpenForReviewCommand(_visualStudioExtensibility, $"{pr.RepoRoot}\\{comment.FilePath}"),
@@ -221,6 +249,40 @@ internal class PRReviewViewModel : INotifyPropertyChanged
                         item,
                         ReloadTreeInternalAsync,
                         message => Status = message);
+                },
+                (item, _, threadState) =>
+                {
+                    if (threadState is null ||
+                        !threadState.IsResolved ||
+                        string.IsNullOrWhiteSpace(threadState.ReviewThreadId))
+                    {
+                        return null;
+                    }
+
+                    return new UnresolveCommand(
+                        _prService,
+                        item,
+                        ReloadTreeInternalAsync,
+                        message => Status = message);
+                },
+                (item, _, threadState) =>
+                {
+                    if (string.IsNullOrWhiteSpace(threadState?.ReviewThreadId))
+                        return null;
+
+                    return new ReplyCommand(
+                        _prService,
+                        item,
+                        ReloadTreeInternalAsync,
+                        message => Status = message);
+                },
+                (item, comment, _) =>
+                {
+                    if (string.IsNullOrWhiteSpace(comment.FilePath))
+                        return null;
+
+                    var fileInfo = pr.ChangedFiles.FirstOrDefault(f => f.Path == comment.FilePath);
+                    return fileInfo is null ? null : new OpenDiffCommand(fileInfo, pr, _repoService);
                 });
 
             foreach (var item in commentItems)

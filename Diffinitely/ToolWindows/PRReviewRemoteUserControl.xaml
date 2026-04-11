@@ -14,6 +14,8 @@
             <RowDefinition Height="Auto"/>
             <!-- main content row (tabs) -->
             <RowDefinition Height="*"/>
+            <!-- status bar row -->
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid.Resources>
@@ -22,6 +24,7 @@
             <local:ZeroToCollapsedConverter x:Key="ZeroToCollapsedConverter" />
             <local:BooleanToCollapsedWhenTrueConverter x:Key="BooleanToCollapsedWhenTrueConverter" />
             <local:BooleanToVisibleWhenTrueConverter   x:Key="BooleanToVisibleWhenTrueConverter" />
+            <local:StringEmptyToCollapsedConverter x:Key="StringEmptyToCollapsedConverter" />
 
             <!-- VS themed base styles for TreeView / TreeViewItem -->
             <Style TargetType="TreeView"
@@ -35,25 +38,37 @@
                         Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
             </Style>
 
-            <!-- Flat clickable button style -->
-            <Style x:Key="FlatListButtonStyle" TargetType="Button">
+            <!-- Flat clickable button style with hover/pressed feedback -->
+            <Style x:Key="FlatListButtonStyle" TargetType="Button"
+                   BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogButtonStyleKey}}">
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="4,2"/>
+                <Setter Property="HorizontalAlignment" Value="Left"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Cursor" Value="Hand"/>
+            </Style>
+
+            <!-- Transparent button style for buttons inside tree rows — no chrome, no hover border -->
+            <Style x:Key="TreeItemButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderBrush" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="0"/>
-                <Setter Property="HorizontalAlignment" Value="Left"/>
-                <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Padding" Value="2,1"/>
                 <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="HorizontalAlignment" Value="Left"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Bg"
-                                    Background="Transparent">
-                                <ContentPresenter
-                                    Margin="{TemplateBinding Padding}"
-                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                             </Border>
                         </ControlTemplate>
                     </Setter.Value>
@@ -72,54 +87,62 @@
             </Style>
 
             <Style TargetType="TabItem">
+                <!-- Inactive tab defaults -->
                 <Setter Property="Foreground"
-            Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                    Value="{DynamicResource {x:Static styles:VsBrushes.GrayTextKey}}"/>
                 <Setter Property="Background"
-            Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                    Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
                 <Setter Property="BorderBrush"
-            Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
-                <Setter Property="Padding" Value="6,3" />
+                    Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                <Setter Property="Padding" Value="8,4" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="TabItem">
                             <Border x:Name="TabBorder"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="1,1,1,0"
-                        Padding="{TemplateBinding Padding}">
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="3,3,0,0"
+                                Padding="{TemplateBinding Padding}">
+                                <!--
+                                    DO NOT set TextElement.Foreground here.
+                                    Let it inherit so ControlTemplate.Triggers can change text color.
+                                -->
                                 <ContentPresenter
-                        x:Name="ContentSite"
-                        ContentSource="Header"
-                        RecognizesAccessKey="True"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        SnapsToDevicePixels="True"
-                        TextElement.Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                    x:Name="ContentSite"
+                                    ContentSource="Header"
+                                    RecognizesAccessKey="True"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    SnapsToDevicePixels="True"/>
                             </Border>
 
                             <ControlTemplate.Triggers>
 
-                                <!-- Selected tab -->
+                                <!-- SELECTED: merge tab into content panel — same background, negative margin covers TabControl border -->
                                 <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="TabBorder" Property="Margin" Value="0,0,0,-1"/>
                                     <Setter TargetName="TabBorder" Property="Background"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
                                     <Setter TargetName="TabBorder" Property="BorderBrush"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                    <Setter TargetName="TabBorder" Property="BorderThickness" Value="1,2,1,0"/>
+                                    <Setter Property="Panel.ZIndex" Value="1"/>
                                     <Setter Property="Foreground"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
                                 </Trigger>
 
-                                <!-- Hover tab -->
+                                <!-- HOVER: subtle lift, full text brightness -->
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="TabBorder" Property="Background"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowKey}}"/>
                                     <Setter TargetName="TabBorder" Property="BorderBrush"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
                                     <Setter Property="Foreground"
-                                Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                        Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
                                 </Trigger>
 
-                                <!-- Disabled tab -->
+                                <!-- DISABLED -->
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter TargetName="TabBorder" Property="Opacity" Value="0.5"/>
                                 </Trigger>
@@ -134,6 +157,20 @@
             <!-- ComboBox theming: keep it readable in dark mode -->
             <Style TargetType="ComboBox"
                    BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogComboBoxStyleKey}}">
+            </Style>
+
+            <!-- TextBox theming with focus border -->
+            <Style TargetType="TextBox">
+                <Setter Property="Background" Value="{DynamicResource {x:Static styles:VsBrushes.WindowKey}}"/>
+                <Setter Property="Foreground" Value="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Style.Triggers>
+                    <Trigger Property="IsFocused" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource {x:Static styles:VsBrushes.AccentBorderKey}}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
         </Grid.Resources>
@@ -162,11 +199,18 @@
                         Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
                 </StackPanel>
             </Button>
-            <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-                <ProgressBar Width="120" Height="14" IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
-                <TextBlock Margin="8,0,0,0" Text="{Binding LoadingText}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
-                <TextBlock Margin="8,0,0,0" Text="{Binding Status}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToCollapsedWhenTrueConverter}}" />
-            </StackPanel>
+            <Button
+                DockPanel.Dock="Left"
+                Style="{StaticResource FlatListButtonStyle}"
+                Command="{Binding OpenInBrowserCommand}"
+                Padding="4,2"
+                Margin="8,0,0,0"
+                Visibility="{Binding PrHtmlUrl, Converter={StaticResource StringEmptyToCollapsedConverter}}"
+                ToolTip="Open this pull request on GitHub.com">
+                <TextBlock Text="🔗 View on GitHub"
+                           Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+            </Button>
+
         </DockPanel>
 
         <!-- ===================== -->
@@ -193,7 +237,7 @@
                         Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
                         BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                         Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                        BorderThickness="1"
+                        BorderThickness="0"
                         Padding="4">
 
                         <TreeView.ItemContainerStyle>
@@ -217,7 +261,7 @@
 
                                     <!-- open diff / open file -->
                                     <Button
-                                        Style="{StaticResource FlatListButtonStyle}"
+                                        Style="{StaticResource TreeItemButtonStyle}"
                                         Command="{Binding OpenCommand}">
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                             <vs:Image Source="{Binding Icon}"
@@ -244,7 +288,8 @@
 
                                     <!-- comment badge -->
                                     <Button
-                                        Style="{StaticResource FlatListButtonStyle}"
+                                        Style="{StaticResource TreeItemButtonStyle}"
+                                        BorderThickness="0"
                                         Command="{Binding OpenCommentsCommand}">
                                         <Border
                                             VerticalAlignment="Center"
@@ -283,47 +328,45 @@
                     </Grid.RowDefinitions>
 
                     <!-- FILTER BAR -->
-                    <DockPanel
+                    <Grid
                         Grid.Row="0"
-                        LastChildFill="False"
-                        Margin="0,0,0,4"
-                        Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
-                        VerticalAlignment="Center">
+                        Margin="8,4,8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>   <!-- "Author:" label -->
+                            <ColumnDefinition Width="*" MinWidth="60" MaxWidth="160"/>  <!-- Author ComboBox -->
+                            <ColumnDefinition Width="8"/>      <!-- spacer -->
+                            <ColumnDefinition Width="Auto"/>   <!-- "Status:" label -->
+                            <ColumnDefinition Width="*" MinWidth="60" MaxWidth="120"/>  <!-- Status ComboBox -->
+                        </Grid.ColumnDefinitions>
 
-                        <!-- Author filter label -->
                         <TextBlock
+                            Grid.Column="0"
                             Text="Author:"
                             Margin="0,0,6,0"
                             VerticalAlignment="Center"
                             Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
 
-                        <!-- Author filter dropdown -->
                         <ComboBox
-                            Width="160"
+                            Grid.Column="1"
                             ItemsSource="{Binding AllAuthors}"
                             SelectedItem="{Binding SelectedAuthor, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            ToolTip="Filter comments by author">
-                        </ComboBox>
+                            ToolTip="Filter comments by author"/>
 
-                        <!-- Resolution filter label -->
                         <TextBlock
+                            Grid.Column="3"
                             Text="Status:"
                             Margin="0,0,6,0"
                             VerticalAlignment="Center"
                             Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
 
-                        <!-- Resolution filter dropdown -->
                         <ComboBox
-                            Width="120"
+                            Grid.Column="4"
                             ItemsSource="{Binding AllResolutionFilters}"
                             SelectedItem="{Binding SelectedResolutionFilter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            Margin="0,0,12,0"
                             VerticalAlignment="Center"
-                            ToolTip="Filter by resolution status">
-                        </ComboBox>
-                    </DockPanel>
+                            ToolTip="Filter by resolution status"/>
+                    </Grid>
 
                     <!-- COMMENT LIST -->
                     <ListView
@@ -332,7 +375,7 @@
                         Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
                         BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                         Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"
-                        BorderThickness="1"
+                        BorderThickness="0"
                         Padding="4"
                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                         ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -353,7 +396,7 @@
                                 <Border
                                     Margin="0,0,0,6"
                                     Padding="6"
-                                    BorderThickness="1"
+                                    BorderThickness="0"
                                     CornerRadius="4"
                                     BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                                     Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
@@ -361,66 +404,79 @@
 
                                     <Grid>
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <!-- row 0: file + line -->
-                                            <RowDefinition Height="Auto"/>
-                                            <!-- row 1: author + time -->
-                                            <RowDefinition Height="Auto"/>
-                                            <!-- row 2: body -->
-                                            <RowDefinition Height="Auto"/>
-                                            <!-- row 3: actions -->
+                                            <RowDefinition Height="Auto"/>  <!-- Row 0: avatar + filename/author header -->
+                                            <RowDefinition Height="Auto"/>  <!-- Row 1: body + thread replies -->
+                                            <RowDefinition Height="Auto"/>  <!-- Row 2: action buttons -->
+                                            <RowDefinition Height="Auto"/>  <!-- Row 3: reply section -->
                                         </Grid.RowDefinitions>
 
-                                        <!-- Row 0: file path + line -->
-                                        <StackPanel Orientation="Horizontal"
-                                                    Grid.Row="0"
-                                                    VerticalAlignment="Center"
-                                                    Margin="0,0,0,2">
-                                            <TextBlock
-                                                Text="{Binding FilePath}"
-                                                FontWeight="Bold"
-                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
-                                            <TextBlock Text="  " />
-                                            <TextBlock
-                                                Text="{Binding Line, StringFormat=Line {0}}"
-                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
-                                        </StackPanel>
+                                        <!-- Row 0: 2-column header (avatar left, filename+author right) -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- Row 1: avatar + author + timestamp -->
-                                        <StackPanel Orientation="Horizontal"
-                                                    Grid.Row="1"
-                                                    VerticalAlignment="Center"
-                                                    Margin="0,0,0,4">
-
+                                            <!-- Col 0: avatar -->
                                             <Image
-                                                Width="16"
-                                                Height="16"
-                                                Margin="0,0,6,0"
+                                                Grid.Column="0"
+                                                Width="40"
+                                                Height="40"
+                                                Margin="0,0,10,0"
+                                                VerticalAlignment="Center"
                                                 Source="{Binding AuthorAvatarUrl}"
                                                 Stretch="UniformToFill"
                                                 SnapsToDevicePixels="True"/>
 
-                                            <TextBlock
-                                                FontSize="10"
-                                                Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}">
-                                                <Run Text="{Binding Author}" />
-                                                <Run Text=" - " />
-                                                <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
-                                            </TextBlock>
-                                        </StackPanel>
+                                            <!-- Col 1: file name (top) + author name (bottom) -->
+                                            <StackPanel
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock
+                                                        Text="{Binding FilePath}"
+                                                        FontWeight="Bold"
+                                                        TextTrimming="CharacterEllipsis"
+                                                        Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                                                    <Border
+                                                        Margin="8,0,0,0"
+                                                        Padding="4,1"
+                                                        CornerRadius="2"
+                                                        BorderThickness="1"
+                                                        BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                                                        Background="{DynamicResource {x:Static styles:VsBrushes.InfoBackgroundKey}}"
+                                                        Visibility="{Binding IsOutdated, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}">
+                                                        <TextBlock
+                                                            Text="Outdated"
+                                                            FontSize="10"
+                                                            FontWeight="SemiBold"
+                                                            Foreground="{DynamicResource {x:Static styles:VsBrushes.InfoTextKey}}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock
+                                                    FontSize="10"
+                                                    Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}">
+                                                    <Run Text="{Binding Author}" />
+                                                    <Run Text=" - " />
+                                                    <Run Text="{Binding FormattedCreatedAt}" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Grid>
 
-                                        <!-- Row 2: body text + thread -->
-                                        <StackPanel Grid.Row="2" Margin="0,0,0,6">
+                                        <!-- Row 1: body text + thread replies -->
+                                        <StackPanel Grid.Row="1" Margin="0,0,0,6">
                                             <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
                                             <ItemsControl ItemsSource="{Binding ThreadReplies}" Margin="12,4,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Margin="0,2,0,2" Padding="4" BorderThickness="1" CornerRadius="3" BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}" Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
+                                                        <Border Margin="0,2,0,2" Padding="4" BorderThickness="0" CornerRadius="3"
+                                                                BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                                                                Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
                                                             <StackPanel>
                                                                 <TextBlock FontSize="10">
                                                                     <Run Text="{Binding Author}" />
                                                                     <Run Text=" - " />
-                                                                    <Run Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
+                                                                    <Run Text="{Binding FormattedCreatedAt}" />
                                                                 </TextBlock>
                                                                 <TextBlock Text="{Binding Body}" TextWrapping="Wrap" FontSize="11" />
                                                             </StackPanel>
@@ -429,14 +485,51 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                         </StackPanel>
-                                        <!-- Row 3: action bar -->
-                                        <DockPanel Grid.Row="3" VerticalAlignment="Center" LastChildFill="False">
-                                            <Button DockPanel.Dock="Left" Style="{StaticResource FlatListButtonStyle}" Command="{Binding ResolveCommand}" Padding="4,2" Margin="0,0,8,0" Visibility="{Binding CanResolve, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" ToolTip="Resolve this review thread">
+
+                                        <!-- Row 2: action buttons -->
+                                        <DockPanel Grid.Row="2" VerticalAlignment="Center" LastChildFill="False">
+                                            <Button DockPanel.Dock="Left"
+                                                    Style="{StaticResource FlatListButtonStyle}"
+                                                    Command="{Binding ResolveCommand}"
+                                                    Padding="4,2" Margin="0,0,8,0"
+                                                    Visibility="{Binding CanResolve, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}"
+                                                    ToolTip="Resolve this review thread">
                                                 <TextBlock Text="Resolve" FontSize="11"/>
                                             </Button>
-                                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatListButtonStyle}" Command="{Binding ViewCommand}" Padding="4,2" Margin="0,0,8,0" HorizontalAlignment="Right">
+                                            <Button DockPanel.Dock="Left"
+                                                    Style="{StaticResource FlatListButtonStyle}"
+                                                    Command="{Binding UnresolveCommand}"
+                                                    Padding="4,2" Margin="0,0,8,0"
+                                                    Visibility="{Binding CanUnresolve, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}"
+                                                    ToolTip="Re-open this review thread">
+                                                <TextBlock Text="Re-open" FontSize="11"/>
+                                            </Button>
+                                            <Button DockPanel.Dock="Left"
+                                                    Style="{StaticResource FlatListButtonStyle}"
+                                                    Command="{Binding JumpToDiffCommand}"
+                                                    Padding="4,2" Margin="0,0,8,0"
+                                                    Visibility="{Binding CanJumpToDiff, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}"
+                                                    ToolTip="Open diff for this file">
                                                 <TextBlock Text="View" FontSize="11"/>
                                             </Button>
+                                        </DockPanel>
+
+                                        <!-- Row 3: reply section -->
+                                        <DockPanel Grid.Row="3" VerticalAlignment="Center" LastChildFill="True" Margin="0,4,0,0"
+                                                   Visibility="{Binding CanReply, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}">
+                                            <Button DockPanel.Dock="Right"
+                                                    Style="{StaticResource FlatListButtonStyle}"
+                                                    Command="{Binding ReplyCommand}"
+                                                    Padding="6,3" Margin="6,0,0,0"
+                                                    ToolTip="Send reply">
+                                                <TextBlock Text="Reply" FontSize="11"/>
+                                            </Button>
+                                            <TextBox
+                                                Text="{Binding ReplyText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Padding="4,3"
+                                                FontSize="11"
+                                                AcceptsReturn="False"
+                                                ToolTip="Write a reply to this thread"/>
                                         </DockPanel>
                                     </Grid>
 
@@ -447,6 +540,27 @@
                 </Grid>
             </TabItem>
         </TabControl>
+
+        <!-- ===================== -->
+        <!-- STATUS BAR (ROW 2) -->
+        <!-- ===================== -->
+        <Border Grid.Row="2"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
+                Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
+                Padding="4,2">
+            <DockPanel>
+                <ProgressBar DockPanel.Dock="Left"
+                             Width="120" Height="4"
+                             IsIndeterminate="True"
+                             Margin="0,0,6,0"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
+                <TextBlock Text="{Binding Status}"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+            </DockPanel>
+        </Border>
     </Grid>
 </DataTemplate>
 

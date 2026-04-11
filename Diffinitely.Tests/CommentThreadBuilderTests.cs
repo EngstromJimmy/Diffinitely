@@ -18,6 +18,7 @@ public class CommentThreadBuilderTests
             ],
             new Dictionary<long, CommentThreadBuilder.ReviewThreadState>(),
             _ => null,
+            (_, _, _) => null,
             (_, _, _) => null);
 
         Assert.Collection(
@@ -37,6 +38,7 @@ public class CommentThreadBuilderTests
             ],
             new Dictionary<long, CommentThreadBuilder.ReviewThreadState>(),
             _ => null,
+            (_, _, _) => null,
             (_, _, _) => null);
 
         var root = Assert.Single(items);
@@ -63,6 +65,9 @@ public class CommentThreadBuilderTests
             _ => null,
             (item, _, threadState) => threadState is not null && !threadState.IsResolved
                 ? new ResolveCommand(item, _ => Task.CompletedTask, null, (_, _) => Task.FromResult(ReviewThreadMutationResult.Success()))
+                : null,
+            (item, _, threadState) => threadState is not null && threadState.IsResolved
+                ? new UnresolveCommand(item, _ => Task.CompletedTask, null, (_, _) => Task.FromResult(ReviewThreadMutationResult.Success()))
                 : null);
 
         Assert.Collection(

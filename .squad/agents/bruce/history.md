@@ -60,3 +60,11 @@ The GitHub service already reads review-thread resolution state, but it currentl
 - Pushed `squad/remove-squad-product-workflows` branch to origin; remote status clean and synced.
 - Decision documented in `.squad/decisions.md`: "Issue #10 Branch Safe to Push"
 - Team cross-sync initiated: Scribe appended completion summary to Lucius, Renee, and Selina history files
+
+### PR Review Thread Features Brainstorm (2026-03-13)
+
+- Completed strategic feature planning for review thread capabilities after Resolve/Unresolve shipped
+- Key themes emerged: (1) inline reply/editing for complete conversation flow, (2) reactions for quick acknowledgment, (3) quick jump-to-diff from comments, (4) improved state persistence on refresh, (5) PR-level summary and filtering
+- Highest-value/lowest-complexity features identified: jump to diff improvement, reply to threads, mark as outdated detection
+- Hard blockers noted: GitHub reactions API has incomplete review-comment support; some features require PRThreadComment object unavailable in current GraphQL queries
+- Priority driven by IDE vs web gap: developers reviewing in VS lose conversation flow continuity when they have to switch to GitHub web to reply or see full context

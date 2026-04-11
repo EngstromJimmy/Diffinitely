@@ -58,3 +58,164 @@
 **Push authorized and executed:** Bruce reviewed working tree against approved design, ran `dotnet test` successfully, and pushed `squad/remove-squad-product-workflows` to origin. Remote status clean. Documented in decisions.md as "Issue #10 Branch Safe to Push."
 
 **Non-blocking caveat:** `ResolveCommand` resolve-success + reload-failure path remains untested; follow-up should cover this defensive branch.
+
+---
+
+## Unresolve Command Implementation
+
+**Completed:** 2026-04-10  
+**Requested by:** Jimmy Engström
+
+**Summary:** Added full Unresolve / Re-open capability mirroring the existing Resolve flow. The feature allows users to reopen resolved GitHub review threads from the PR comments view.
+
+**Changes:**
+
+1. **`GitHubPullRequestService` (Services/GitHubPullRequestService.cs):**
+   - Added `UnresolveReviewThreadAsync(string reviewThreadId, CancellationToken ct)` method
+   - Uses GitHub GraphQL mutation `unresolveReviewThread`
+   - Validates thread ID, handles auth failure gracefully
+   - Confirms GitHub response echoes back with `isResolved = false`
+
+2. **`UnresolveCommand` (Commands/UnresolveCommand.cs):**
+   - New command class mirroring `ResolveCommand` structure exactly
+   - Gated by `CanExecute`: thread must be currently resolved (`IsResolved == true`)
+   - Reports failures without silent success
+   - Reloads comments after successful unresolve to refresh UI state
+
+3. **`PrCommentItem` (Models/PrCommentItem.cs):**
+   - Added `UnresolveCommand` property
+
+4. **`CommentThreadBuilder` (ToolWindows/CommentThreadBuilder.cs):**
+   - Extended `Build` method signature to accept `createUnresolveCommand` factory
+   - Wires `UnresolveCommand` to items during thread construction
+
+5. **`PRReviewViewModel` (ToolWindows/PRReviewViewModel.cs):**
+   - Added unresolve command factory in `ReloadTreeInternalAsync`
+   - Factory only creates `UnresolveCommand` when thread is resolved and has valid thread ID
+
+6. **Tests (Diffinitely.Tests/CommentThreadBuilderTests.cs):**
+   - Updated all `CommentThreadBuilder.Build` calls to include `createUnresolveCommand` parameter
+
+**Patterns used:**
+- Async all the way: `UnresolveReviewThreadAsync`, `ExecuteAsync`
+- Cancellation token passed through entire chain
+- GraphQL mutation result validated before declaring success
+- Status messages reported via optional `setStatus` action
+- Command gating via `CanExecute` based on `IsResolved` state
+- Post-mutation reload ensures UI truth matches GitHub truth
+
+**Orchestration:** Completed in parallel with Selina (UI) and Renee (tests). All 23 tests passing.
+
+
+---
+
+## Unresolve Command Implementation
+
+**Completed:** 2026-03-14  
+**Requested by:** Jimmy Engström
+
+**Summary:** Added full Unresolve / Re-open capability mirroring the existing Resolve flow. The feature allows users to reopen resolved GitHub review threads from the PR comments view.
+
+**Changes:**
+
+1. **`GitHubPullRequestService` (Services/GitHubPullRequestService.cs):**
+   - Added `UnresolveReviewThreadAsync(string reviewThreadId, CancellationToken ct)` method
+   - Uses GitHub GraphQL mutation `unresolveReviewThread` (line 190)
+   - Validates thread ID, handles auth failure gracefully
+   - Confirms GitHub response echoes back with `isResolved = false`
+   - Added helper method `TryGetUnresolvedThread` to parse GraphQL response (line 383)
+
+2. **`UnresolveCommand` (Commands/UnresolveCommand.cs):**
+   - New command class mirroring `ResolveCommand` structure exactly
+   - Gated by `CanExecute`: thread must be currently resolved (`IsResolved == true`)
+   - Reports failures without silent success
+   - Reloads comments after successful unresolve to refresh UI state
+
+3. **`PrCommentItem` (Models/PrCommentItem.cs):**
+   - Added `UnresolveCommand` property (line 44)
+
+4. **`CommentThreadBuilder` (ToolWindows/CommentThreadBuilder.cs):**
+   - Extended `Build` method signature to accept `createUnresolveCommand` factory (line 56)
+   - Wires `UnresolveCommand` to items during thread construction (line 80)
+
+5. **`PRReviewViewModel` (ToolWindows/PRReviewViewModel.cs):**
+   - Added unresolve command factory in `ReloadTreeInternalAsync` (lines 228-239)
+   - Factory only creates `UnresolveCommand` when thread is resolved and has valid thread ID
+
+6. **Tests (Diffinitely.Tests/CommentThreadBuilderTests.cs):**
+   - Updated all `CommentThreadBuilder.Build` calls to include `createUnresolveCommand` parameter
+   - Added unresolve command factory to test covering resolved/unresolved affordance logic
+
+**Patterns used:**
+- Async all the way: `UnresolveReviewThreadAsync`, `ExecuteAsync`
+- Cancellation token passed through entire chain
+- GraphQL mutation result validated before declaring success
+- Status messages reported via optional `setStatus` action
+- Command gating via `CanExecute` based on `IsResolved` state
+- Post-mutation reload ensures UI truth matches GitHub truth
+
+**Key file paths:**
+- `Diffinitely/Services/GitHubPullRequestService.cs` (service-layer mutation)
+- `Diffinitely/Commands/UnresolveCommand.cs` (command implementation)
+- `Diffinitely/Models/PrCommentItem.cs` (data model)
+- `Diffinitely/ToolWindows/CommentThreadBuilder.cs` (thread builder)
+- `Diffinitely/ToolWindows/PRReviewViewModel.cs` (ViewModel wiring)
+- `Diffinitely.Tests/CommentThreadBuilderTests.cs` (test coverage)
+
+---
+
+## View on GitHub Link Implementation
+
+**Completed:** 2025-01-24  
+**Requested by:** Jimmy Engström
+
+**Summary:** Added a "View on GitHub" link at the top of the PR review tool window that opens the current PR on GitHub.com in the default browser.
+
+**Changes:**
+
+1. **`PullRequestInfo` (Models/PullRequestInfo.cs):**
+   - Added `HtmlUrl` property to store the GitHub web URL for the PR
+
+2. **`GitHubPullRequestService` (Services/GitHubPullRequestService.cs):**
+   - Updated `GetCurrentBranchPullRequestAsync` to populate `HtmlUrl` from Octokit `PullRequest.HtmlUrl`
+
+3. **`OpenInBrowserCommand` (Commands/OpenInBrowserCommand.cs):**
+   - New command class implementing `IAsyncCommand`
+   - Opens URL using `Process.Start` with `UseShellExecute = true`
+   - Gated by `CanExecute` to ensure URL is non-empty
+   - Silent failure handling (opening browser is best-effort)
+
+4. **`PRReviewViewModel` (ToolWindows/PRReviewViewModel.cs):**
+   - Added `PrHtmlUrl` property (with `[DataMember]` for Remote UI)
+   - Added `OpenInBrowserCommand` property dynamically created when URL is set
+   - URL populated when PR is loaded; cleared when no PR exists
+
+5. **`StringEmptyToCollapsedConverter` (ToolWindows/StringEmptyToCollapsedConverter.cs):**
+   - New WPF converter to hide link when URL is empty or null
+   - Returns `Visibility.Collapsed` for empty/null strings, `Visibility.Visible` otherwise
+
+6. **`PRReviewRemoteUserControl.xaml` (ToolWindows/PRReviewRemoteUserControl.xaml):**
+   - Added new Row 0 for GitHub link (above existing toolbar)
+   - Link styled as button with underline and GitHub blue color (#FF0969DA)
+   - Uses emoji 🔗 prefix for visual clarity
+   - Visibility bound to `PrHtmlUrl` via `StringEmptyToCollapsedConverter`
+   - Command bound to `OpenInBrowserCommand`
+   - Tooltip: "Open this pull request on GitHub.com"
+
+**Patterns used:**
+- Followed existing command pattern (ResolveCommand, UnresolveCommand)
+- Used Remote UI-compatible button for link (not WPF Hyperlink which requires navigation handlers)
+- Property notification via `INotifyPropertyChanged`
+- `[DataMember]` on all ViewModel properties for VS extensibility Remote UI
+- Visibility controlled via binding and converter (not code-behind)
+
+**Build validation:** All 38 tests passed; build succeeded with no errors.
+
+**Key file paths:**
+- `Diffinitely/Models/PullRequestInfo.cs` (data model)
+- `Diffinitely/Services/GitHubPullRequestService.cs` (service layer)
+- `Diffinitely/Commands/OpenInBrowserCommand.cs` (command implementation)
+- `Diffinitely/ToolWindows/PRReviewViewModel.cs` (ViewModel wiring)
+- `Diffinitely/ToolWindows/StringEmptyToCollapsedConverter.cs` (converter)
+- `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml` (UI)
+

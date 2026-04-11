@@ -124,7 +124,7 @@ namespace Diffinitely.Services
                 changed.Add(new ChangedFileInfo { CommentCount = numberOfComments, FullPath = $"{repoRoot}\\{f.FileName}", Path = f.FileName, PreviousPath = f.PreviousFileName, Kind = kind });
             }
             var reviewThreads = await GetReviewThreadsAsync(owner, repo, pr.Number, ct);
-            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot, ReviewThreads = reviewThreads };
+            return new PullRequestInfo { Comments = comments, Id = pr.Number.ToString(), Title = pr.Title, HtmlUrl = pr.HtmlUrl, ChangedFiles = changed, Owner = owner, Repository = repo, BaseSha = pr.Base?.Sha, HeadSha = pr.Head?.Sha, RepoRoot = repoRoot, ReviewThreads = reviewThreads };
         }
 
         public async Task<string?> GetFileContentAsync(string owner, string repo, string path, string sha, CancellationToken ct)
@@ -187,6 +187,104 @@ namespace Diffinitely.Services
             }
         }
 
+        internal virtual async Task<ReviewThreadMutationResult> UnresolveReviewThreadAsync(string reviewThreadId, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(reviewThreadId))
+            {
+                return ReviewThreadMutationResult.Failure("The review thread is missing its GitHub thread ID.");
+            }
+
+            if (!await EnsureCredentialsAsync(ct))
+            {
+                return ReviewThreadMutationResult.Failure("GitHub authentication is unavailable, so the review thread could not be unresolved.");
+            }
+
+            var query = "mutation($threadId:ID!){unresolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}";
+
+            try
+            {
+                using var response = await PostGraphQlAsync(query, new { threadId = reviewThreadId }, ct);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return ReviewThreadMutationResult.Failure($"GitHub returned {(int)response.StatusCode} ({response.ReasonPhrase}) while unresolving the review thread.");
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+
+                if (TryGetGraphQlError(doc.RootElement, out var errorMessage))
+                {
+                    return ReviewThreadMutationResult.Failure(errorMessage);
+                }
+
+                if (!TryGetUnresolvedThread(doc.RootElement, out var unresolvedThreadId, out var isResolved) ||
+                    isResolved ||
+                    !string.Equals(unresolvedThreadId, reviewThreadId, StringComparison.Ordinal))
+                {
+                    return ReviewThreadMutationResult.Failure("GitHub did not confirm that the review thread was unresolved.");
+                }
+
+                return ReviewThreadMutationResult.Success();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return ReviewThreadMutationResult.Failure($"Unresolving the review thread failed: {ex.Message}");
+            }
+        }
+
+        internal virtual async Task<ReviewThreadMutationResult> AddReviewThreadReplyAsync(
+            string reviewThreadId, string body, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(reviewThreadId))
+                return ReviewThreadMutationResult.Failure("The review thread is missing its GitHub thread ID.");
+
+            if (string.IsNullOrWhiteSpace(body))
+                return ReviewThreadMutationResult.Failure("Reply body cannot be empty.");
+
+            if (!await EnsureCredentialsAsync(ct))
+                return ReviewThreadMutationResult.Failure("GitHub authentication is unavailable, so the reply could not be sent.");
+
+            var query = "mutation($threadId:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$threadId,body:$body}){comment{id}}}";
+
+            try
+            {
+                using var response = await PostGraphQlAsync(query, new { threadId = reviewThreadId, body }, ct);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return ReviewThreadMutationResult.Failure(
+                        $"GitHub returned {(int)response.StatusCode} ({response.ReasonPhrase}) while sending the reply.");
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+
+                if (TryGetGraphQlError(doc.RootElement, out var errorMessage))
+                    return ReviewThreadMutationResult.Failure(errorMessage);
+
+                if (!doc.RootElement.TryGetProperty("data", out var data) ||
+                    !data.TryGetProperty("addPullRequestReviewThreadReply", out var replyResult) ||
+                    !replyResult.TryGetProperty("comment", out var comment) ||
+                    !comment.TryGetProperty("id", out _))
+                {
+                    return ReviewThreadMutationResult.Failure("GitHub did not confirm that the reply was sent.");
+                }
+
+                return ReviewThreadMutationResult.Success();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                return ReviewThreadMutationResult.Failure($"Sending the reply failed: {ex.Message}");
+            }
+        }
+
         /// <summary>
         /// Queries the GitHub GraphQL API to get review-thread node IDs and resolved state.
         /// Returns a dictionary keyed by the top-level review comment database ID.
@@ -205,7 +303,7 @@ namespace Diffinitely.Services
                 bool hasNextPage;
                 do
                 {
-                    var query = "query($owner:String!,$repo:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){nodes{id isResolved comments(first:1){nodes{databaseId}}} pageInfo{hasNextPage endCursor}}}}}";
+                    var query = "query($owner:String!,$repo:String!,$number:Int!,$cursor:String){repository(owner:$owner,name:$repo){pullRequest(number:$number){reviewThreads(first:100,after:$cursor){nodes{id isResolved isOutdated comments(first:1){nodes{databaseId}}} pageInfo{hasNextPage endCursor}}}}}";
                     using var response = await PostGraphQlAsync(query, new { owner, repo, number = prNumber, cursor }, ct);
                     if (!response.IsSuccessStatusCode) return result;
 
@@ -228,6 +326,9 @@ namespace Diffinitely.Services
                             continue;
                         }
 
+                        var isOutdated = thread.TryGetProperty("isOutdated", out var isOutdatedProp) &&
+                                         isOutdatedProp.ValueKind == JsonValueKind.True;
+
                         if (!thread.TryGetProperty("comments", out var comments) ||
                             !comments.TryGetProperty("nodes", out var commentNodes))
                         {
@@ -242,7 +343,8 @@ namespace Diffinitely.Services
                                 result[dbIdProp.GetInt64()] = new PullRequestReviewThread
                                 {
                                     Id = threadIdProp.GetString() ?? string.Empty,
-                                    IsResolved = isResolvedProp.GetBoolean()
+                                    IsResolved = isResolvedProp.GetBoolean(),
+                                    IsOutdated = isOutdated
                                 };
                             }
                         }
@@ -344,6 +446,29 @@ namespace Diffinitely.Services
             if (!root.TryGetProperty("data", out var data)) return false;
             if (!data.TryGetProperty("resolveReviewThread", out var resolveReviewThread)) return false;
             if (!resolveReviewThread.TryGetProperty("thread", out var thread)) return false;
+
+            if (thread.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
+            {
+                threadId = idProp.GetString();
+            }
+
+            if (thread.TryGetProperty("isResolved", out var isResolvedProp) &&
+                (isResolvedProp.ValueKind == JsonValueKind.True || isResolvedProp.ValueKind == JsonValueKind.False))
+            {
+                isResolved = isResolvedProp.GetBoolean();
+            }
+
+            return !string.IsNullOrWhiteSpace(threadId);
+        }
+
+        private static bool TryGetUnresolvedThread(JsonElement root, out string? threadId, out bool isResolved)
+        {
+            threadId = null;
+            isResolved = false;
+
+            if (!root.TryGetProperty("data", out var data)) return false;
+            if (!data.TryGetProperty("unresolveReviewThread", out var unresolveReviewThread)) return false;
+            if (!unresolveReviewThread.TryGetProperty("thread", out var thread)) return false;
 
             if (thread.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String)
             {
