@@ -210,10 +210,7 @@
                 <TextBlock Text="🔗 View on GitHub"
                            Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
             </Button>
-            <StackPanel Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-                <ProgressBar Width="120" Height="14" IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
-                <TextBlock Margin="8,0,0,0" Text="{Binding LoadingText}" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
-            </StackPanel>
+
         </DockPanel>
 
         <!-- ===================== -->
@@ -551,11 +548,18 @@
                 BorderThickness="0,1,0,0"
                 BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                 Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
-                Padding="4,2"
-                Visibility="{Binding Status, Converter={StaticResource StringEmptyToCollapsedConverter}}">
-            <TextBlock Text="{Binding Status}"
-                       FontSize="11"
-                       Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+                Padding="4,2">
+            <DockPanel>
+                <ProgressBar DockPanel.Dock="Left"
+                             Width="120" Height="4"
+                             IsIndeterminate="True"
+                             Margin="0,0,6,0"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}" />
+                <TextBlock Text="{Binding Status}"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource {x:Static styles:VsBrushes.WindowTextKey}}"/>
+            </DockPanel>
         </Border>
     </Grid>
 </DataTemplate>
