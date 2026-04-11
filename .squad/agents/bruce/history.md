@@ -68,3 +68,16 @@ The GitHub service already reads review-thread resolution state, but it currentl
 - Highest-value/lowest-complexity features identified: jump to diff improvement, reply to threads, mark as outdated detection
 - Hard blockers noted: GitHub reactions API has incomplete review-comment support; some features require PRThreadComment object unavailable in current GraphQL queries
 - Priority driven by IDE vs web gap: developers reviewing in VS lose conversation flow continuity when they have to switch to GitHub web to reply or see full context
+
+### README audit against XAML (today)
+
+- Conducted a line-by-line audit of `PRReviewRemoteUserControl.xaml` against `README.md`
+- Found five missing features: View on GitHub toolbar button, inline reply text box + Reply button, sticky status bar, "View" button on comments (renamed from "Jump to Diff"), and "Outdated" badge on comment headers
+- Updated README Overview to reflect tabbed layout and reply capability
+- Updated Side-by-Side Diff entry to call out the View button path from comments
+- Updated Review Comments entry to include thread replies, outdated badges, and inline reply
+- Added View on GitHub and Status Bar as explicit feature bullets
+- Expanded VS Theme Support to mention VS-styled tabs with hover/active effects
+- Removed stale "line numbers" detail from Review Comments (not present in current XAML)
+- Did not add mention of Resolve/Re-open per Jimmy's explicit instruction; those buttons ARE in the XAML but were out-of-scope for README documentation
+
