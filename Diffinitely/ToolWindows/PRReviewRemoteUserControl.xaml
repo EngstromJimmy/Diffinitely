@@ -399,7 +399,7 @@
                                 <Border
                                     Margin="0,0,0,6"
                                     Padding="6"
-                                    BorderThickness="1"
+                                    BorderThickness="0"
                                     CornerRadius="4"
                                     BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                                     Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}"
@@ -472,7 +472,7 @@
                                             <ItemsControl ItemsSource="{Binding ThreadReplies}" Margin="12,4,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Margin="0,2,0,2" Padding="4" BorderThickness="1" CornerRadius="3"
+                                                        <Border Margin="0,2,0,2" Padding="4" BorderThickness="0" CornerRadius="3"
                                                                 BorderBrush="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBorderKey}}"
                                                                 Background="{DynamicResource {x:Static styles:VsBrushes.ToolWindowBackgroundKey}}">
                                                             <StackPanel>
