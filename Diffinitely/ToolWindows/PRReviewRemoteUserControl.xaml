@@ -330,7 +330,7 @@
                     <!-- FILTER BAR -->
                     <Grid
                         Grid.Row="0"
-                        Margin="14,4,14,4">
+                        Margin="8,4,8,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>   <!-- "Author:" label -->
                             <ColumnDefinition Width="*" MinWidth="60" MaxWidth="160"/>  <!-- Author ComboBox -->
@@ -510,7 +510,7 @@
                                                     Padding="4,2" Margin="0,0,8,0"
                                                     Visibility="{Binding CanJumpToDiff, Converter={StaticResource BooleanToVisibleWhenTrueConverter}}"
                                                     ToolTip="Open diff for this file">
-                                                <TextBlock Text="Jump to Diff" FontSize="11"/>
+                                                <TextBlock Text="View" FontSize="11"/>
                                             </Button>
                                         </DockPanel>
 
