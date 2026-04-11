@@ -51,7 +51,7 @@
 - **Re-open button (Unresolve UI):** The Re-open button mirrors the Resolve button with opposite visibility logic. `CanUnresolve` is set in `CommentThreadBuilder.cs` when `threadState.IsResolved == true` and valid `ReviewThreadId` exists. The button binds to `UnresolveCommand` and uses `BooleanToVisibleWhenTrueConverter` on `CanUnresolve`. XAML: `PRReviewRemoteUserControl.xaml` line 437-439. Model: `PrCommentItem.cs` added `CanUnresolve` property. Builder: `CommentThreadBuilder.cs` line 86-89 sets `CanUnresolve`.
 - **VS Extensibility Remote UI button triggers:** In `Microsoft.VisualStudio.Extensibility` Remote UI, `ControlTemplate.Triggers` are silently ignored. For interactive visual feedback (hover, pressed states), ALWAYS use `Style.Triggers` directly on the button style. Use VS-themed brushes like `VsBrushes.CommandBarHoverKey` and `VsBrushes.CommandBarSelectedKey`. Always set `Cursor="Hand"` for affordance.
 - **VS Remote UI StringFormat constraint (DateTimeOffset bindings):** `StringFormat` on `Run.Text` bindings does NOT work in VS Remote UI for non-primitive types like `DateTimeOffset`. The binding falls through to the proxy object's `.ToString()` which returns the full .NET Remote UI type name ("Microsoft Visual Studio Platform UI..."). **Always expose a pre-formatted string property on the model** (e.g., `public string FormattedCreatedAt => CreatedAt.ToString("yyyy-MM-dd HH:mm")`) and bind directly to that instead. Do NOT use `[DataMember]` on computed properties — they are derived, not serialized. Fixed in `PRCommentItem.cs` and `PrCommentReply.cs` with `FormattedCreatedAt` property.
-- **Tab styling — ThemedDialogTabItemStyleKey exists and works:** `VsResourceKeys.ThemedDialogTabItemStyleKey` is a valid resource key in `Microsoft.VisualStudio.Shell.15.0`. Using `BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogTabItemStyleKey}}"` on a `TabItem` style gives correct VS-native selected/hover/inactive states with no blue and proper contrast. This is the preferred approach — no need to hand-author `ControlTemplate.Triggers` for tabs.
+- **Tab styling — ThemedDialogTabItemStyleKey compiles but FAILS at runtime:** `VsResourceKeys.ThemedDialogTabItemStyleKey` compiles cleanly but throws `XamlParseException` ("StaticExtension value cannot be resolved") at runtime in VS Remote UI. **Never use it.** Use a fully manual `ControlTemplate` with VS brush keys instead (`ToolWindowContentBackgroundKey` for selected, `CommandBarMouseOverBackgroundBeginKey` for hover, `GrayTextKey` for inactive foreground).
 - **ContentPresenter TextElement.Foreground blocks trigger-based foreground:** If a `ContentPresenter` inside a tab's `ControlTemplate` has `TextElement.Foreground` set explicitly (e.g. hardcoded to `WindowTextKey`), any `Trigger`-based `Foreground` setter on the parent `TabItem` is silently overridden and has no visible effect. Always omit `TextElement.Foreground` from `ContentPresenter` in tab templates if you want foreground triggers to apply.
 
 ---
@@ -364,6 +364,42 @@ Do NOT flatten this to just the header — all four sections are required.
 - **Active tab:** Lighter background + accent top border + full-brightness text
 - **Inactive tabs:** Default background + dimmed text
 - **Hover:** Subtle background change + full-brightness text
+
+**Files Modified:** `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml`
+
+**Testing:**
+- `dotnet build --no-incremental -verbosity:minimal` — 0 errors, 25 warnings (pre-existing)
+- `dotnet test --no-build -verbosity:minimal` — all 38 tests passing
+
+---
+
+## Tab Styling — ThemedDialogTabItemStyleKey Runtime Fix
+
+**Completed:** 2026-04-11
+**Requested by:** Jimmy Engström
+
+**Summary:** `ThemedDialogTabItemStyleKey` compiles cleanly but throws `XamlParseException` at runtime in VS Remote UI ("StaticExtension value cannot be resolved"). Replaced with a fully manual `ControlTemplate`.
+
+**Changes:**
+
+- Removed `BasedOn="{StaticResource {x:Static styles:VsResourceKeys.ThemedDialogTabItemStyleKey}}"` from `<Style TargetType="TabItem">` — gone entirely, no `BasedOn` on the new style.
+- Replaced the two-line style with a full manual `ControlTemplate` approach.
+
+**Brush keys used (confirmed working):**
+
+- **Selected background:** `VsBrushes.ToolWindowContentBackgroundKey` — VS SDK standard key for selected tab content area
+- **Hover background:** `VsBrushes.CommandBarMouseOverBackgroundBeginKey` — subtle hover lift
+- **Inactive background:** `VsBrushes.ToolWindowBackgroundKey` — base tool window background (known-good)
+- **Inactive foreground:** `VsBrushes.GrayTextKey` — dimmed inactive tab labels
+- **Active/hover foreground:** `VsBrushes.WindowTextKey` — full-brightness text (known-good)
+- **Border:** `VsBrushes.ToolWindowBorderKey` — all states (known-good)
+
+**Key Learnings:**
+- `ThemedDialogTabItemStyleKey` does NOT exist at runtime in VS Remote UI — compiles but throws `XamlParseException`. **Never use it.**
+- `ControlTemplate.Triggers` DO work for `TabItem` in VS Remote UI (confirmed again — selected, hover, disabled triggers all apply correctly).
+- `ContentPresenter` inside a tab `ControlTemplate` must NOT have `TextElement.Foreground` set — omit it entirely so foreground trigger setters on the `TabItem` can propagate through.
+- `ToolWindowContentBackgroundKey` is a valid VS SDK key and works at runtime for selected tab background.
+- `CommandBarMouseOverBackgroundBeginKey` is a valid VS SDK key and works at runtime for hover tab background.
 
 **Files Modified:** `Diffinitely/ToolWindows/PRReviewRemoteUserControl.xaml`
 
