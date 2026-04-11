@@ -460,3 +460,23 @@ Do NOT flatten this to just the header — all four sections are required.
 **Testing:**
 - `dotnet build Diffinitely --no-restore` — Build succeeded, 0 errors
 - `dotnet test Diffinitely.Tests --no-restore -v quiet` — All 39 tests pass
+
+---
+
+### Filter Bar Padding Alignment (2026-04-10)
+
+**Issue:** The filter bar (Author/Status dropdowns) at the top of the Comments tab had `Margin="4,4,4,4"`, which placed it ~10px too far left compared to the actual content inside comment cards below.
+
+**Root Cause Analysis:**
+- ListView has `Padding="4"`
+- ListViewItem has default WPF padding of `Padding="4,1"` (no ItemContainerStyle to override it)
+- Comment Border has `Padding="6"`
+- Total left offset of comment content: 4 + 4 + 6 = 14px
+- Filter bar had only `Margin="4"` → misaligned by 10px
+
+**Fix:** Changed filter bar `Margin="4,4,4,4"` to `Margin="14,4,14,4"` to match the cumulative left/right padding of comment content.
+
+**Key Learning:**
+- When aligning container elements with nested content, calculate the full padding stack: `ListView.Padding` + `ListViewItem` default padding (if no ItemContainerStyle) + `DataTemplate` root element padding.
+- Default WPF ListViewItem has `Padding="4,1"` for left/top — it's not zero unless explicitly styled away.
+- Visual alignment details matter in tool window UX; even 10px misalignment creates a sloppy feel.
