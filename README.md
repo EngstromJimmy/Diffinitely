@@ -6,6 +6,7 @@ A Visual Studio 2022 extension that brings GitHub pull request reviews directly 
 ![.NET](https://img.shields.io/badge/.NET-4.7.2-512BD4?logo=dotnet)
 ![GitHub](https://img.shields.io/badge/GitHub-Octokit-181717?logo=github)
 ![Status](https://img.shields.io/badge/status-preview-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Overview
 
@@ -92,4 +93,6 @@ Contributions are welcome! Please open an issue or submit a pull request.
 
 ## License
 
-This project is currently unlicensed. See [LICENSE](LICENSE) for details once added.
+MIT License — see [LICENSE](LICENSE) for details.
+
+If you find Diffinitely useful, consider [sponsoring on GitHub](https://github.com/sponsors/EngstromJimmy) — it helps keep the project going. ❤️
