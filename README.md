@@ -11,6 +11,12 @@ A Visual Studio 2022 extension that brings GitHub pull request reviews directly 
 
 Diffinitely adds a **Pull Request Review** tool window to Visual Studio 2022. It automatically detects the current Git branch, finds the corresponding GitHub pull request, and presents changed files and review comments in a tabbed side panel. Open diffs with one click, reply to review threads, and jump to GitHub — all without leaving the IDE.
 
+## Screenshots
+
+![Changed Files Tree — Browse PR-changed files in a hierarchical tree with file-type icons, change indicators, and comment badges](Tree.png)
+
+![Review Comments — View all PR review comments with author avatars, file paths, timestamps, and thread replies](Comments.png)
+
 ## Features
 
 - **Changed Files Tree** — Browse all PR-changed files in a hierarchical tree with file-type icons, change kind indicators (Added, Modified, Deleted, Renamed), and comment count badges.
